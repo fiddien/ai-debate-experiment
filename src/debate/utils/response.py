@@ -3,7 +3,7 @@ import string
 import logging
 from typing import List
 
-from .types import DebateResponse
+from ..types import DebateResponse
 
 logger = logging.getLogger(__name__)
 

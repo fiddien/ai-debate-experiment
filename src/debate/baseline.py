@@ -6,7 +6,7 @@ from typing import Any, Dict, List
 from models.baseline_prompt import BaselinePromptTemplate
 from models.llms import get_response
 
-from .cache_utils import generate_cache_key, load_from_cache, save_to_cache
+from .utils.cache import generate_cache_key, load_from_cache, save_to_cache
 from .types import DebateScenario, JudgementResult
 
 
@@ -57,7 +57,9 @@ class BaselineManager:
         """Get response from specified model."""
         self.logger.debug("Getting baseline response from model: %s", model)
         try:
-            response = get_response(model, messages)
+            response = get_response(
+                model, messages, "baseline", scenario_id=self.scenario.id
+            )
             self.logger.debug("Received baseline response from %s", model)
             return response
         except Exception as e:

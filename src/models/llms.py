@@ -7,6 +7,7 @@ from os import environ
 import google.generativeai as google_client
 from anthropic import Anthropic
 from openai import OpenAI
+from langfuse.decorators import observe, langfuse_context
 
 google_client.configure(api_key=environ.get("GOOGLE_API_KEY"))
 anthropic_client = Anthropic(api_key=environ.get("ANTHROPIC_API_KEY"))
@@ -19,20 +20,17 @@ provider_models = {
         "claude-3-5-haiku-20241022",
         "claude-3-opus-20240229",
         "claude-3-haiku-20240307",
-        "claude-2.1",
     ],
     "Google": [
         "gemini-1.5-pro",
-        "gemini-2.0-flash-exp",
         "gemini-1.5-flash",
         "gemini-1.5-flash-8b",
-        "gemini-1.0-pro",
     ],
     "DeepSeek": ["deepseek-chat"],
     "Groq": [
+        "mixtral-8x7b-32768",
         "llama-3.3-70b-versatile",
         "llama-3.1-8b-instant",
-        "mixtral-8x7b-32768",
     ],
 }
 
@@ -58,14 +56,30 @@ def translate_to_google_schema(messages):
     return google_schema
 
 
-def get_response(model: str, messages):
+@observe(as_type="generation")
+def get_response(model: str, messages, tags: str = None, **kwargs):
     """Generate a response from the model."""
+    langfuse_context.update_current_observation(
+        input=messages,
+        model=model,
+        metadata=kwargs,
+        tags=tags,
+    )
+    result = 0
+    input_tokens = 0
+    output_tokens = 0
+
+    if model not in provider_of:
+        raise ValueError(f"Model {model} is not supported.")
+
     if provider_of[model] == "Google":
         messages = translate_to_google_schema(messages)
-        model = google_client.GenerativeModel(model)
-        chat = model.start_chat(history=messages[:-1])
+        model_client = google_client.GenerativeModel(model)
+        chat = model_client.start_chat(history=messages[:-1])
         response = chat.send_message(messages[-1])
-        return response.text
+        result = response.text
+        input_tokens = response.usage_metadata.prompt_token_count
+        output_tokens = response.usage_metadata.candidates_token_count
 
     elif provider_of[model] == "Anthropic":
         if messages[0]["role"] == "system":
@@ -73,14 +87,17 @@ def get_response(model: str, messages):
             messages = messages[1:]
         else:
             system_message = ""
-        message = anthropic_client.messages.create(
+
+        response = anthropic_client.messages.create(
             model=model,
             max_tokens=3094,
             temperature=0.1,
             system=system_message,
             messages=messages,
         )
-        return message.content[0].text
+        result = response.content[0].text
+        input_tokens = response.usage.input_tokens
+        output_tokens = response.usage.output_tokens
 
     elif provider_of[model] == "OpenAI":
         response = openai_client.chat.completions.create(
@@ -89,6 +106,15 @@ def get_response(model: str, messages):
             max_tokens=3094,
             temperature=0.1,
         )
-        return response.choices[0].message.text
-    else:
-        raise NotImplementedError(f"Model {model} is not supported.")
+        result = response.choices[0].message.content
+        input_tokens = response.usage.prompt_tokens
+        output_tokens = response.usage.completion_tokens
+
+    langfuse_context.update_current_observation(
+        usage_details={
+            "input": input_tokens,
+            "output": output_tokens
+        }
+    )
+
+    return result

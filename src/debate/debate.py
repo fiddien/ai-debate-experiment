@@ -8,10 +8,9 @@ from typing import Any, Dict, List, Tuple
 
 from typing_extensions import Union
 
-from models.debater_prompt import DebatePromptTemplate
-from models.llms import get_response
+from src.models.debater_prompt import DebatePromptTemplate
+from src.models.llms import get_response
 
-from .cache_utils import generate_cache_key, load_from_cache, save_to_cache
 from .config import DEFAULT_MAX_ROUNDS, DEFAULT_WORD_LIMIT
 from .exceptions import DebateConfigurationError
 from .types import (
@@ -21,7 +20,8 @@ from .types import (
     DebaterNames,
     DebateScenario,
 )
-from .utils import extract_argument, format_transcript, validate_citations
+from .utils.cache import generate_cache_key, load_from_cache, save_to_cache
+from .utils.response import extract_argument, format_transcript, validate_citations
 
 
 class DebateTwoPlayers:
@@ -118,12 +118,19 @@ class DebateTwoPlayers:
 
         return DebatePromptTemplate.create_prompt_messages(context)
 
-    def _get_debater_response(self, name: str, messages: List[Dict[str, Any]]) -> str:
+    def _get_debater_response(self, name: str, messages: List[Dict[str, Any]], **kwargs) -> str:
         """Get response from the LLM model for the given debater."""
         model = self.name_to_model[name]
         self.logger.debug("Getting response from model %s for debater %s", model, name)
         try:
-            response = get_response(model, messages)
+            response = get_response(
+                model,
+                messages,
+                "debater",
+                name="name",
+                scenario_id=self.scenario.id,
+                **kwargs
+            )
             return response
         except Exception as e:
             self.logger.error("Error getting response from %s: %s", model, str(e))
@@ -176,7 +183,7 @@ class DebateTwoPlayers:
                     all_wrong=all_wrong,
                 )
                 self.logger.debug("Prompt messages: %s", messages)
-                response = self._get_debater_response(name, messages)
+                response = self._get_debater_response(name, messages, record_id=record.id)
                 arguments = extract_argument(response)
                 validated = validate_citations(arguments, self.scenario.situation)
                 record.transcript.append(

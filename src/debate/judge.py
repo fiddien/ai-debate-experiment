@@ -3,11 +3,11 @@
 import logging
 from typing import Any, Dict, List, Optional
 
-from debate.utils import format_transcript
+from src.debate.utils.response import format_transcript
 from models.judge_prompt import JudgePromptTemplate
 from models.llms import get_response
 
-from .cache_utils import generate_cache_key, load_from_cache, save_to_cache
+from .utils.cache import generate_cache_key, load_from_cache, save_to_cache
 from .types import (
     DebateRecord,
     JudgeContext,
@@ -54,7 +54,13 @@ class JudgeManager:
         """
         self.logger.debug("Getting judge response from model: %s", model)
         try:
-            response = get_response(model, messages)
+            response = get_response(
+                model,
+                messages,
+                "judge",
+                scenario_id=self.record.scenario.id,
+                record_id=self.record.id,
+            )
             self.logger.debug("Received response from %s", model)
             return response
         except Exception as e:

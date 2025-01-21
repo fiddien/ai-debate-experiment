@@ -251,14 +251,14 @@ MODEL_CONFIGS = {
         "debater_models": ["claude-3-haiku-20240307", "claude-3-haiku-20240307"],
         "judge_models": ["claude-3-haiku-20240307"]
     },
-    "config2": {  # Stronger judge
-        "debater_models": ["claude-3-haiku-20240307", "claude-3-haiku-20240307"],
-        "judge_models": ["claude-3-sonnet-20240229"]
-    },
-    "config3": {  # Stronger debaters
-        "debater_models": ["claude-3-sonnet-20240229", "claude-3-sonnet-20240229"],
-        "judge_models": ["claude-3-haiku-20240307"]
-    }
+    # "config2": {  # Stronger judge
+    #     "debater_models": ["claude-3-haiku-20240307", "claude-3-haiku-20240307"],
+    #     "judge_models": ["claude-3-sonnet-20240229"]
+    # },
+    # "config3": {  # Stronger debaters
+    #     "debater_models": ["claude-3-sonnet-20240229", "claude-3-sonnet-20240229"],
+    #     "judge_models": ["claude-3-haiku-20240307"]
+    # }
 }
 
 if __name__ == "__main__":
@@ -277,7 +277,7 @@ if __name__ == "__main__":
         JUDGE_MODELS = models["judge_models"]
 
         # Set up output directory for this configuration
-        output_dir = f"results/{config_name}"
+        OUTPUT_DIR = f"results/{config_name}"
 
 
         # Process scenarios in streaming fashion with parallel processing
@@ -287,6 +287,6 @@ if __name__ == "__main__":
             DEBATER_MODELS,
             JUDGE_MODELS,
             batch_size=5,
-            output_dir=output_dir,
+            output_dir=OUTPUT_DIR,
             num_workers=4,
         )

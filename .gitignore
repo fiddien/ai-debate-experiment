@@ -1,6 +1,8 @@
 .venv/
 .conda/
 .env
+data/
+results/
 BoardgameQA/
 Boardgame.zip
 __pycache__/
