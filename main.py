@@ -13,10 +13,10 @@ from functools import partial
 from pathlib import Path
 from typing import Dict, Generator, Iterator, List, Tuple
 
-from debate.baseline import BaselineManager
-from debate.debate import DebateTwoPlayers
-from debate.judge import JudgeManager
-from debate.types import DebateScenario
+from src.debate.baseline import BaselineManager
+from src.debate.debate import DebateTwoPlayers
+from src.debate.judge import JudgeManager
+from src.debate.types import DebateScenario
 
 logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO
@@ -44,7 +44,7 @@ def load_boardgame_qa(base_path: str = "BoardgameQA") -> dict:
     return ds
 
 
-def sample_data(ds: dict, sample_size: float = 0.102) -> dict:
+def sample_data(ds: dict, sample_size: float = 0.052) -> dict:
     """Sample data while maintaining label distribution."""
     sampled_data = {}
     for level, data in ds.items():
@@ -59,6 +59,7 @@ def sample_data(ds: dict, sample_size: float = 0.102) -> dict:
             sample.extend(random.sample(exs, sample_size_per_label))
 
         sampled_data[level] = sample
+    display_total(sampled_data)
     return sampled_data
 
 
@@ -86,17 +87,25 @@ def display_total(ds: dict):
 
 
 def save_sampled_data(data: dict, filepath: str):
-    """Save sampled dataset to JSON file."""
+    """Save sampled dataset to JSONL file."""
     Path(filepath).parent.mkdir(exist_ok=True)
     with open(filepath, "w", encoding="utf-8") as f:
-        json.dump(data, f)
+        for level, examples in data.items():
+            for example in examples:
+                example["level"] = level  # Add level info to each example
+                f.write(json.dumps(example) + "\n")
 
 
 def load_sampled_data(filepath: str) -> dict:
-    """Load sampled dataset from JSON file."""
+    """Load sampled dataset from JSONL file."""
     try:
+        data = defaultdict(list)
         with open(filepath, "r", encoding="utf-8") as f:
-            return json.load(f)
+            for line in f:
+                example = json.loads(line.strip())
+                level = example.pop("level")  # Remove and get level info
+                data[level].append(example)
+        return dict(data)
     except FileNotFoundError:
         return None
 
@@ -263,7 +272,7 @@ MODEL_CONFIGS = {
 
 if __name__ == "__main__":
 
-    SAMPLED_DATA_PATH = "data/sampled_boardgame_qa.json"
+    SAMPLED_DATA_PATH = "data/sampled_boardgame_qa.jsonl"  # Changed extension to .jsonl
     # Check if sampled data exists
     if not os.path.exists(SAMPLED_DATA_PATH):
         save_sampled_data(sample_data(load_boardgame_qa()), SAMPLED_DATA_PATH)

@@ -4,8 +4,8 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from src.debate.utils.response import format_transcript
-from models.judge_prompt import JudgePromptTemplate
-from models.llms import get_response
+from src.models.judge_prompt import JudgePromptTemplate
+from src.models.llms import get_response
 
 from .utils.cache import generate_cache_key, load_from_cache, save_to_cache
 from .types import (
@@ -20,7 +20,7 @@ class JudgeManager:
 
     def __init__(self, record: DebateRecord, judge_models: Optional[List[str]] = None):
         self.record = record
-        self.judge_models = judge_models or []
+        self.judge_models = list(set(judge_models)) or []
         self.results: Dict[str, List[JudgementResult]] = {}
         self.logger = logging.getLogger(__name__)
         self.logger.info(

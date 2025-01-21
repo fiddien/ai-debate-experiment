@@ -127,7 +127,7 @@ class DebateTwoPlayers:
                 model,
                 messages,
                 "debater",
-                name="name",
+                name=name,
                 scenario_id=self.scenario.id,
                 **kwargs
             )

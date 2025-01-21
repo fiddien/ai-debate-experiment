@@ -4,7 +4,7 @@ Prompts for the Debater model.
 
 from typing import Dict, List
 
-from debate.types import DebateContext
+from src.debate.types import DebateContext
 
 THINKING_ADVICE = {
     1: """1. Consider what facts, rules, and preferences are relevant to establishing or refuting the statement.

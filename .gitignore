@@ -3,6 +3,7 @@
 .env
 data/
 results/
+temp_results/
 BoardgameQA/
 Boardgame.zip
 __pycache__/

@@ -2,7 +2,7 @@
 
 from typing import Dict, List
 
-from debate.types import DebateScenario
+from src.debate.types import DebateScenario
 
 SYSTEM_PROMPT = """
 You are an AI assistant that helps with logical reasoning questions based on a situation. Your task is to determine the correct answer based on the situation provided.

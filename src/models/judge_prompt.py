@@ -2,7 +2,7 @@
 
 from typing import Dict, List
 
-from debate.types import JudgeContext
+from src.debate.types import JudgeContext
 
 SYSTEM_PROMPT = """
 You are an expert judge in a debate where the participants are arguing over the correct answer to a logical reasoning questions based on a situation. Your task is to determine which debater is correct.
