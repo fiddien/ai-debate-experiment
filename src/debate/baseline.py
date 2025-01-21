@@ -2,6 +2,7 @@
 
 import logging
 from typing import Any, Dict, List
+from langfuse.decorators import observe, langfuse_context
 
 from src.models.baseline_prompt import BaselinePromptTemplate
 from src.models.llms import get_response
@@ -26,6 +27,7 @@ class BaselineManager:
             "baseline", scenario_id=scenario.id, models=self.models
         )
 
+    @observe()
     def run(self) -> Dict[str, List[JudgementResult]]:
         """Run baseline evaluation with caching and return results."""
         self.logger.info("Starting baseline evaluation")
@@ -39,6 +41,11 @@ class BaselineManager:
                 for model, results in cached_results.items()
             }
             return self.results
+
+        langfuse_context.update_current_trace(
+            tags=["baseline"],
+            user_id=self.scenario.id,
+        )
 
         # Run evaluation
         messages = BaselinePromptTemplate.create_prompt_messages(self.scenario)

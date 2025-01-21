@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional
 from src.debate.utils.response import format_transcript
 from src.models.judge_prompt import JudgePromptTemplate
 from src.models.llms import get_response
+from langfuse.decorators import observe, langfuse_context
 
 from .utils.cache import generate_cache_key, load_from_cache, save_to_cache
 from .types import (
@@ -56,10 +57,7 @@ class JudgeManager:
         try:
             response = get_response(
                 model,
-                messages,
-                tags=["judge"],
-                session_id=self.record.id,
-                user_id=self.record.scenario.id,
+                messages
             )
             self.logger.debug("Received response from %s", model)
             return response
@@ -67,6 +65,8 @@ class JudgeManager:
             self.logger.error("Error getting response from %s: %s", model, str(e))
             raise
 
+
+    @observe()
     def run(self) -> Dict[str, List[JudgementResult]]:
         """Run judgment with caching and return results."""
         self.logger.info("Starting judgment phase")
@@ -80,6 +80,12 @@ class JudgeManager:
                 for model, results in cached_results.items()
             }
             return self.results
+
+        langfuse_context.update_current_trace(
+            tags=["judge"],
+            session_id=self.record.id,
+            user_id=self.record.scenario.id,
+        )
 
         # Run normal judgment if not cached
         messages = self._create_judge_messages()

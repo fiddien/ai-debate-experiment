@@ -59,16 +59,10 @@ def translate_to_google_schema(messages):
 @observe(as_type="generation")
 def get_response(model: str, messages, **kwargs):
     """Generate a response from the model."""
-    tags = kwargs.pop("tags", None)
-    session_id = kwargs.pop("session_id", None)
-    user_id = kwargs.pop("user_id", None)
     langfuse_context.update_current_observation(
-        input=messages,
         model=model,
+        input=messages,
         metadata=kwargs,
-        tags=tags,
-        session_id=session_id,
-        user_id=user_id,
     )
     result = 0
     input_tokens = 0

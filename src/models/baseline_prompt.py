@@ -40,8 +40,8 @@ class BaselinePromptTemplate:
     def _create_user_message(scenario: DebateScenario) -> Dict[str, str]:
         # Construct multiple answer options like A, B, C, etc.
         answer_labels = [chr(ord("A") + i) for i in range(len(scenario.answer_options))]
-        answer_options = "\n- ".join(
-            f"{label}: {option}" for label, option in zip(answer_labels, scenario.answer_options)
+        answer_options = "\n".join(
+            f"- {label}: {option}" for label, option in zip(answer_labels, scenario.answer_options)
         )
         return {
             "role": "user",

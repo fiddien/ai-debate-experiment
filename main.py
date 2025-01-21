@@ -13,6 +13,7 @@ from functools import partial
 from pathlib import Path
 from typing import Dict, Generator, Iterator, List, Tuple
 from enum import Enum, Flag, auto
+from tqdm import tqdm
 
 from src.debate.baseline import BaselineManager
 from src.debate.debate import DebateTwoPlayers
@@ -20,7 +21,7 @@ from src.debate.judge import JudgeManager
 from src.debate.types import DebateScenario
 
 logging.basicConfig(
-    format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO
+    format="%(asctime)s - %(levelname)s - %(message)s", level=logging.WARNING
 )
 
 logger = logging.getLogger(__name__)
@@ -36,6 +37,8 @@ LEVELS = [
 
 
 class RunMode(Flag):
+    """Run modes for the debate experiments."""
+
     BASELINE = auto()
     DEBATE = auto()
     JUDGE = auto()
@@ -67,7 +70,9 @@ def sample_data(ds: dict, samples_per_label: int = 20) -> dict:
 
         sample = []
         for exs in label_to_examples.values():
-            actual_samples = min(samples_per_label, len(exs))  # Handle if we have fewer examples
+            actual_samples = min(
+                samples_per_label, len(exs)
+            )  # Handle if we have fewer examples
             sample.extend(random.sample(exs, actual_samples))
 
         sampled_data[level] = sample
@@ -128,7 +133,11 @@ def load_sampled_data(filepath: str) -> dict:
 def load_scenarios_stream(filepath: str) -> Generator[DebateScenario, None, None]:
     """Load and yield scenarios one at a time from JSONL file."""
     with open(filepath, "r", encoding="utf-8") as f:
-        for line in f:
+        # Count total lines first for tqdm
+        total_lines = sum(1 for _ in f)
+        f.seek(0)  # Reset file pointer
+
+        for line in tqdm(f, total=total_lines, desc="Loading scenarios"):
             example = json.loads(line.strip())
             situation, question = split_question(example["example"])
             yield DebateScenario(
@@ -196,20 +205,24 @@ def save_batch_results(results: List[Dict], batch_num: int, output_dir: str):
 
     for r in results:
         # Ensure all objects are converted to dictionaries
-        combined["debates"].extend([
-            debate if isinstance(debate, dict) else debate.to_dict()
-            for debate in r["debates"]
-        ])
+        combined["debates"].extend(
+            [
+                debate if isinstance(debate, dict) else debate.to_dict()
+                for debate in r["debates"]
+            ]
+        )
 
         # Merge baseline and judgment results
         for key in ["baseline", "judgments"]:
             for model, items in r[key].items():
                 if model not in combined[key]:
                     combined[key][model] = []
-                combined[key][model].extend([
-                    item if isinstance(item, dict) else item.to_dict()
-                    for item in items
-                ])
+                combined[key][model].extend(
+                    [
+                        item if isinstance(item, dict) else item.to_dict()
+                        for item in items
+                    ]
+                )
 
     # Save each result type
     for key, content in combined.items():
@@ -231,7 +244,7 @@ def process_batch(
     if num_workers is None:
         num_workers = max(1, mp.cpu_count() - 1)
 
-    # Process scenarios in parallel
+    # Process scenarios in parallel with progress bar
     with mp.Pool(num_workers) as pool:
         process_func = partial(
             process_single_scenario,
@@ -239,7 +252,11 @@ def process_batch(
             judge_models=judge_models,
             run_mode=run_mode,
         )
-        results = pool.map(process_func, scenarios)
+        results = list(tqdm(
+            pool.imap(process_func, scenarios),
+            total=len(scenarios),
+            desc=f"Processing batch {batch_num}"
+        ))
 
     # Save combined results
     save_batch_results(results, batch_num, output_dir)
@@ -260,10 +277,30 @@ def process_scenarios_in_batches(
     batch = []
     batch_num = 0
 
-    for scenario in scenarios:
-        batch.append(scenario)
+    # Convert iterator to list to get total count for tqdm
+    scenarios = list(scenarios)
+    total_batches = (len(scenarios) + batch_size - 1) // batch_size
 
-        if len(batch) >= batch_size:
+    with tqdm(total=total_batches, desc="Processing batches") as pbar:
+        for scenario in scenarios:
+            batch.append(scenario)
+
+            if len(batch) >= batch_size:
+                process_batch(
+                    batch,
+                    debater_models,
+                    judge_models,
+                    run_mode,
+                    batch_num,
+                    output_dir,
+                    num_workers,
+                )
+                batch = []
+                batch_num += 1
+                pbar.update(1)
+
+        # Process remaining scenarios
+        if batch:
             process_batch(
                 batch,
                 debater_models,
@@ -273,27 +310,14 @@ def process_scenarios_in_batches(
                 output_dir,
                 num_workers,
             )
-            batch = []
-            batch_num += 1
-
-    # Process remaining scenarios
-    if batch:
-        process_batch(
-            batch,
-            debater_models,
-            judge_models,
-            run_mode,
-            batch_num,
-            output_dir,
-            num_workers,
-        )
+            pbar.update(1)
 
 
 # Model configurations
 MODEL_CONFIGS = {
     "self-play-claude-3.5-haiku": {
         "debater_models": ["claude-3-5-haiku-20241022", "claude-3-5-haiku-20241022"],
-        "judge_models": ["claude-3-5-haiku-20241022"]
+        "judge_models": ["claude-3-5-haiku-20241022"],
     },
     # "self-play-claude-3.5-sonnet": {
     #     "debater_models": ["claude-3-5-sonnet-20241022", "claude-3-5-sonnet-20241022"],
@@ -311,7 +335,7 @@ MODEL_CONFIGS = {
 
 if __name__ == "__main__":
     # Add run configuration
-    RUN_MODE = RunMode.BASELINE
+    RUN_MODE = RunMode.DEBATE | RunMode.JUDGE
     # For example:
     # RUN_MODE = RunMode.BASELINE  # Only baseline
     # RUN_MODE = RunMode.DEBATE | RunMode.JUDGE  # Only debate and judge
@@ -332,7 +356,6 @@ if __name__ == "__main__":
 
         # Set up output directory for this configuration
         OUTPUT_DIR = f"results/{config_name}"
-
 
         # Process scenarios in streaming fashion with parallel processing
         scenarios_stream = load_scenarios_stream(SAMPLED_DATA_PATH)

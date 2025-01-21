@@ -7,6 +7,7 @@ import time
 from typing import Any, Dict, List, Tuple
 
 from typing_extensions import Union
+from langfuse.decorators import observe, langfuse_context
 
 from src.models.debater_prompt import DebatePromptTemplate
 from src.models.llms import get_response
@@ -147,6 +148,7 @@ class DebateTwoPlayers:
             )[0]
         return debater_positions
 
+    @observe()
     def run(
         self, swap: bool = False, all_wrong: bool = False, cooldown: int = 10
     ) -> DebateRecord:
@@ -169,6 +171,12 @@ class DebateTwoPlayers:
             debater_models=self.name_to_model,
             swap=swap,
             all_wrong=all_wrong,
+        )
+
+        langfuse_context.update_current_trace(
+            tags=["debate"],
+            user_id=self.scenario.id,
+            session_id=record.id,
         )
 
         # Run debate rounds
