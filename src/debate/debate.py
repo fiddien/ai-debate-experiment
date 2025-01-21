@@ -118,7 +118,9 @@ class DebateTwoPlayers:
 
         return DebatePromptTemplate.create_prompt_messages(context)
 
-    def _get_debater_response(self, name: str, messages: List[Dict[str, Any]], **kwargs) -> str:
+    def _get_debater_response(
+        self, name: str, messages: List[Dict[str, Any]], **kwargs
+    ) -> str:
         """Get response from the LLM model for the given debater."""
         model = self.name_to_model[name]
         self.logger.debug("Getting response from model %s for debater %s", model, name)
@@ -126,10 +128,10 @@ class DebateTwoPlayers:
             response = get_response(
                 model,
                 messages,
-                "debater",
+                tags="debater",
+                session_id=kwargs.get("record_id", None),
+                user_id=self.scenario.id,
                 name=name,
-                scenario_id=self.scenario.id,
-                **kwargs
             )
             return response
         except Exception as e:
@@ -146,7 +148,7 @@ class DebateTwoPlayers:
         return debater_positions
 
     def run(
-        self, swap: bool = False, all_wrong: bool = False, cooldown: int = 1
+        self, swap: bool = False, all_wrong: bool = False, cooldown: int = 10
     ) -> DebateRecord:
         """Run the debate with caching and return the record."""
         run_cache_key = generate_cache_key(
@@ -183,7 +185,9 @@ class DebateTwoPlayers:
                     all_wrong=all_wrong,
                 )
                 self.logger.debug("Prompt messages: %s", messages)
-                response = self._get_debater_response(name, messages, record_id=record.id)
+                response = self._get_debater_response(
+                    name, messages, record_id=record.id
+                )
                 arguments = extract_argument(response)
                 validated = validate_citations(arguments, self.scenario.situation)
                 record.transcript.append(

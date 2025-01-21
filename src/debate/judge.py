@@ -57,9 +57,9 @@ class JudgeManager:
             response = get_response(
                 model,
                 messages,
-                "judge",
-                scenario_id=self.record.scenario.id,
-                record_id=self.record.id,
+                tags="judge",
+                session_id=self.record.id,
+                user_id=self.record.scenario.id,
             )
             self.logger.debug("Received response from %s", model)
             return response

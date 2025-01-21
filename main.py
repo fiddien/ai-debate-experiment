@@ -27,9 +27,9 @@ logger = logging.getLogger(__name__)
 
 # Dataset difficulty levels
 LEVELS = [
-    "ZeroConflict",
+    # "ZeroConflict",
     "LowConflict",
-    "Main",  # Medium
+    # "Main",  # Medium
     "HighConflict",
 ]
 
@@ -44,21 +44,26 @@ def load_boardgame_qa(base_path: str = "BoardgameQA") -> dict:
     return ds
 
 
-def sample_data(ds: dict, sample_size: float = 0.052) -> dict:
-    """Sample data while maintaining label distribution."""
+def sample_data(ds: dict, samples_per_label: int = 20) -> dict:
+    """Sample data with fixed size per label.
+
+    Args:
+        ds: Dataset dictionary with difficulty levels as keys
+        samples_per_label: Number of examples to sample for each label
+    """
     sampled_data = {}
     for level, data in ds.items():
         label_to_examples = defaultdict(list)
-
         for example in data:
             label_to_examples[example["label"]].append(example)
 
         sample = []
         for exs in label_to_examples.values():
-            sample_size_per_label = int(len(exs) * sample_size)
-            sample.extend(random.sample(exs, sample_size_per_label))
+            actual_samples = min(samples_per_label, len(exs))  # Handle if we have fewer examples
+            sample.extend(random.sample(exs, actual_samples))
 
         sampled_data[level] = sample
+
     display_total(sampled_data)
     return sampled_data
 
@@ -80,10 +85,12 @@ def convert_to_scenarios(examples: list) -> list[DebateScenario]:
 
 
 def display_total(ds: dict):
-    """Display the total number of examples per level."""
+    """Display the total number of examples per label and per level."""
     print("Total examples per level:")
     for level, data in ds.items():
         print(f"{level}: {len(data)}")
+        for label in set([ex["label"] for ex in data]):
+            print(f"  - {label}: {len([ex for ex in data if ex['label'] == label])}")
 
 
 def save_sampled_data(data: dict, filepath: str):
@@ -257,8 +264,8 @@ def process_scenarios_in_batches(
 # Model configurations
 MODEL_CONFIGS = {
     "config1": {  # Same capability
-        "debater_models": ["claude-3-haiku-20240307", "claude-3-haiku-20240307"],
-        "judge_models": ["claude-3-haiku-20240307"]
+        "debater_models": ["claude-3-5-sonnet-20241022", "claude-3-5-sonnet-20241022"],
+        "judge_models": ["claude-3-5-sonnet-20241022"]
     },
     # "config2": {  # Stronger judge
     #     "debater_models": ["claude-3-haiku-20240307", "claude-3-haiku-20240307"],
@@ -277,6 +284,7 @@ if __name__ == "__main__":
     if not os.path.exists(SAMPLED_DATA_PATH):
         save_sampled_data(sample_data(load_boardgame_qa()), SAMPLED_DATA_PATH)
 
+    exit()
     # Run experiments for each configuration
     for config_name, models in MODEL_CONFIGS.items():
         print(f"\nRunning experiments for {config_name}")

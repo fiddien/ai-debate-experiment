@@ -59,7 +59,10 @@ class BaselineManager:
         # Cache results
         save_to_cache(
             self.cache_key,
-            {model: [r.to_dict() for r in results] for model, results in self.results.items()},
+            {
+                model: [r.to_dict() for r in results]
+                for model, results in self.results.items()
+            },
         )
 
         return self.results
@@ -69,7 +72,8 @@ class BaselineManager:
         self.logger.debug("Getting baseline response from model: %s", model)
         try:
             response = get_response(
-                model, messages, "baseline", scenario_id=self.scenario.id
+                model, messages, tags="baseline",
+                user_id=self.scenario.id,
             )
             self.logger.debug("Received baseline response from %s", model)
             return response
