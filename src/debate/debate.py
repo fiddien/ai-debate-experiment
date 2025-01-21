@@ -128,7 +128,7 @@ class DebateTwoPlayers:
             response = get_response(
                 model,
                 messages,
-                tags="debater",
+                tags=["debater"],
                 session_id=kwargs.get("record_id", None),
                 user_id=self.scenario.id,
                 name=name,

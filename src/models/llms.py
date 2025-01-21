@@ -68,6 +68,7 @@ def get_response(model: str, messages, **kwargs):
         metadata=kwargs,
         tags=tags,
         session_id=session_id,
+        user_id=user_id,
     )
     result = 0
     input_tokens = 0
@@ -94,7 +95,7 @@ def get_response(model: str, messages, **kwargs):
 
         response = anthropic_client.messages.create(
             model=model,
-            max_tokens=3094,
+            max_tokens=1000,
             temperature=0.1,
             system=system_message,
             messages=messages,
@@ -107,7 +108,7 @@ def get_response(model: str, messages, **kwargs):
         response = openai_client.chat.completions.create(
             model=model,
             messages=messages,
-            max_tokens=3094,
+            max_tokens=1000,
             temperature=0.1,
         )
         result = response.choices[0].message.content

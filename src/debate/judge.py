@@ -57,7 +57,7 @@ class JudgeManager:
             response = get_response(
                 model,
                 messages,
-                tags="judge",
+                tags=["judge"],
                 session_id=self.record.id,
                 user_id=self.record.scenario.id,
             )

@@ -72,7 +72,9 @@ class BaselineManager:
         self.logger.debug("Getting baseline response from model: %s", model)
         try:
             response = get_response(
-                model, messages, tags="baseline",
+                model,
+                messages,
+                tags=["baseline"],
                 user_id=self.scenario.id,
             )
             self.logger.debug("Received baseline response from %s", model)
@@ -84,9 +86,8 @@ class BaselineManager:
     def get_results(self, model: str = None) -> Dict[str, List[JudgementResult]]:
         """Return the baseline evaluation results for specified model or all models."""
         self.logger.debug("Retrieving results for model: %s", model if model else "all")
-        if not self.results:
-            self.run()
         if model:
             model_key = f"{model}_baseline"
-            return {model_key: self.results.get(model_key, [])}
+            result = self.results.get(model_key, [])
+            return {model_key: result.to_dict() if result else []}
         return self.results

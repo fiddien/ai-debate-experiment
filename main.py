@@ -12,6 +12,7 @@ from collections import defaultdict
 from functools import partial
 from pathlib import Path
 from typing import Dict, Generator, Iterator, List, Tuple
+from enum import Enum, Flag, auto
 
 from src.debate.baseline import BaselineManager
 from src.debate.debate import DebateTwoPlayers
@@ -32,6 +33,13 @@ LEVELS = [
     # "Main",  # Medium
     "HighConflict",
 ]
+
+
+class RunMode(Flag):
+    BASELINE = auto()
+    DEBATE = auto()
+    JUDGE = auto()
+    ALL = BASELINE | DEBATE | JUDGE
 
 
 def load_boardgame_qa(base_path: str = "BoardgameQA") -> dict:
@@ -143,41 +151,38 @@ def process_single_scenario(
     scenario: DebateScenario,
     debater_models: List[str],
     judge_models: List[str],
+    run_mode: RunMode,
 ) -> Dict:
     """Process a single scenario and return all results."""
     results = {"baseline": {}, "debates": [], "judgments": {}}
 
-    # Run baseline
-    baseline = BaselineManager(scenario=scenario, models=judge_models)
-    baseline.run()
-    results["baseline"] = baseline.get_results()
+    if RunMode.BASELINE in run_mode:
+        baseline = BaselineManager(scenario=scenario, models=judge_models)
+        results["baseline"] = baseline.run()
 
-    # Run debate with different variants
-    debate = DebateTwoPlayers(
-        scenario=scenario,
-        debater_models=debater_models,
-        word_limit=300,
-        max_debate_rounds=3,
-    )
+    if RunMode.DEBATE in run_mode:
+        debate = DebateTwoPlayers(
+            scenario=scenario,
+            debater_models=debater_models,
+            word_limit=150,
+            max_debate_rounds=3,
+        )
 
-    for variant in [
-        {"swap": False, "all_wrong": False},
-        {"swap": True, "all_wrong": False},
-        {"swap": False, "all_wrong": True},
-    ]:
-        # Run debate and get record
-        record = debate.run(**variant)
-        results["debates"].append(record.to_dict())
+        for variant in [
+            {"swap": False, "all_wrong": False},
+            {"swap": True, "all_wrong": False},
+            {"swap": False, "all_wrong": True},
+        ]:
+            record = debate.run(**variant)
+            results["debates"].append(record.to_dict())
 
-        # Run judgment immediately for this record
-        judge = JudgeManager(record=record, judge_models=judge_models)
-        judge_results = judge.run()
-
-        # Merge judgment results
-        for model, judgments in judge_results.items():
-            if model not in results["judgments"]:
-                results["judgments"][model] = []
-            results["judgments"][model].extend(judgments)
+            if RunMode.JUDGE in run_mode:
+                judge = JudgeManager(record=record, judge_models=judge_models)
+                judge_results = judge.run()
+                for model, judgments in judge_results.items():
+                    if model not in results["judgments"]:
+                        results["judgments"][model] = []
+                    results["judgments"][model].extend(judgments)
 
     return results
 
@@ -190,13 +195,21 @@ def save_batch_results(results: List[Dict], batch_num: int, output_dir: str):
     combined = {"baseline": {}, "debates": [], "judgments": {}}
 
     for r in results:
-        combined["debates"].extend(r["debates"])
+        # Ensure all objects are converted to dictionaries
+        combined["debates"].extend([
+            debate if isinstance(debate, dict) else debate.to_dict()
+            for debate in r["debates"]
+        ])
+
         # Merge baseline and judgment results
         for key in ["baseline", "judgments"]:
             for model, items in r[key].items():
                 if model not in combined[key]:
                     combined[key][model] = []
-                combined[key][model].extend(items)
+                combined[key][model].extend([
+                    item if isinstance(item, dict) else item.to_dict()
+                    for item in items
+                ])
 
     # Save each result type
     for key, content in combined.items():
@@ -209,6 +222,7 @@ def process_batch(
     scenarios: List[DebateScenario],
     debater_models: List[str],
     judge_models: List[str],
+    run_mode: RunMode,
     batch_num: int,
     output_dir: str,
     num_workers: int = None,
@@ -223,6 +237,7 @@ def process_batch(
             process_single_scenario,
             debater_models=debater_models,
             judge_models=judge_models,
+            run_mode=run_mode,
         )
         results = pool.map(process_func, scenarios)
 
@@ -234,6 +249,7 @@ def process_scenarios_in_batches(
     scenarios: Iterator[DebateScenario],
     debater_models: List[str],
     judge_models: List[str],
+    run_mode: RunMode = RunMode.ALL,
     batch_size: int = 5,
     output_dir: str = "results",
     num_workers: int = None,
@@ -249,7 +265,13 @@ def process_scenarios_in_batches(
 
         if len(batch) >= batch_size:
             process_batch(
-                batch, debater_models, judge_models, batch_num, output_dir, num_workers
+                batch,
+                debater_models,
+                judge_models,
+                run_mode,
+                batch_num,
+                output_dir,
+                num_workers,
             )
             batch = []
             batch_num += 1
@@ -257,18 +279,28 @@ def process_scenarios_in_batches(
     # Process remaining scenarios
     if batch:
         process_batch(
-            batch, debater_models, judge_models, batch_num, output_dir, num_workers
+            batch,
+            debater_models,
+            judge_models,
+            run_mode,
+            batch_num,
+            output_dir,
+            num_workers,
         )
 
 
 # Model configurations
 MODEL_CONFIGS = {
-    "config1": {  # Same capability
-        "debater_models": ["claude-3-5-sonnet-20241022", "claude-3-5-sonnet-20241022"],
-        "judge_models": ["claude-3-5-sonnet-20241022"]
+    "self-play-claude-3.5-haiku": {
+        "debater_models": ["claude-3-5-haiku-20241022", "claude-3-5-haiku-20241022"],
+        "judge_models": ["claude-3-5-haiku-20241022"]
     },
+    # "self-play-claude-3.5-sonnet": {
+    #     "debater_models": ["claude-3-5-sonnet-20241022", "claude-3-5-sonnet-20241022"],
+    #     "judge_models": ["claude-3-5-sonnet-20241022"]
+    # },
     # "config2": {  # Stronger judge
-    #     "debater_models": ["claude-3-haiku-20240307", "claude-3-haiku-20240307"],
+    #     "debater_models": ["claude-3-5-haiku-20241022", "claude-3-haiku-20240307"],
     #     "judge_models": ["claude-3-sonnet-20240229"]
     # },
     # "config3": {  # Stronger debaters
@@ -278,13 +310,18 @@ MODEL_CONFIGS = {
 }
 
 if __name__ == "__main__":
+    # Add run configuration
+    RUN_MODE = RunMode.BASELINE
+    # For example:
+    # RUN_MODE = RunMode.BASELINE  # Only baseline
+    # RUN_MODE = RunMode.DEBATE | RunMode.JUDGE  # Only debate and judge
+    # RUN_MODE = RunMode.BASELINE | RunMode.DEBATE  # Only baseline and debate
 
     SAMPLED_DATA_PATH = "data/sampled_boardgame_qa.jsonl"  # Changed extension to .jsonl
     # Check if sampled data exists
     if not os.path.exists(SAMPLED_DATA_PATH):
         save_sampled_data(sample_data(load_boardgame_qa()), SAMPLED_DATA_PATH)
 
-    exit()
     # Run experiments for each configuration
     for config_name, models in MODEL_CONFIGS.items():
         print(f"\nRunning experiments for {config_name}")
@@ -303,6 +340,7 @@ if __name__ == "__main__":
             scenarios_stream,
             DEBATER_MODELS,
             JUDGE_MODELS,
+            RUN_MODE,
             batch_size=5,
             output_dir=OUTPUT_DIR,
             num_workers=4,
