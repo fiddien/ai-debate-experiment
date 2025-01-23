@@ -2,6 +2,7 @@
 Main script to run the debate experiments with the BoardgameQA dataset.
 """
 
+import hashlib
 import json
 import logging
 import multiprocessing as mp
@@ -9,10 +10,11 @@ import os
 import random
 import re
 from collections import defaultdict
+from enum import Flag, auto
 from functools import partial
 from pathlib import Path
 from typing import Dict, Generator, Iterator, List, Tuple
-from enum import Enum, Flag, auto
+
 from tqdm import tqdm
 
 from src.debate.baseline import BaselineManager
@@ -81,22 +83,6 @@ def sample_data(ds: dict, samples_per_label: int = 20) -> dict:
     return sampled_data
 
 
-def convert_to_scenarios(examples: list) -> list[DebateScenario]:
-    """Convert BoardgameQA examples to DebateScenario objects."""
-
-    scenarios = []
-    for ex in examples:
-        situation, question = split_question(ex["example"])
-        scenario = DebateScenario(
-            situation=situation,
-            question=question,
-            answer_options=["proved", "disproved", "unknown"],
-            label=ex["label"],
-        )
-        scenarios.append(scenario)
-    return scenarios
-
-
 def display_total(ds: dict):
     """Display the total number of examples per label and per level."""
     print("Total examples per level:")
@@ -138,13 +124,14 @@ def load_scenarios_stream(filepath: str) -> Generator[DebateScenario, None, None
         f.seek(0)  # Reset file pointer
 
         for line in tqdm(f, total=total_lines, desc="Loading scenarios"):
-            example = json.loads(line.strip())
-            situation, question = split_question(example["example"])
+            game = json.loads(line.strip())
+            situation, question = split_question(game["example"])
             yield DebateScenario(
                 situation=situation,
                 question=question,
                 answer_options=["proved", "disproved", "unknown"],
-                label=example["label"],
+                label=game["label"],
+                id=hashlib.md5(game["example"].encode()).hexdigest(),
             )
 
 
@@ -161,6 +148,7 @@ def process_single_scenario(
     debater_models: List[str],
     judge_models: List[str],
     run_mode: RunMode,
+    debate_records_path: str = None,
 ) -> Dict:
     """Process a single scenario and return all results."""
     results = {"baseline": {}, "debates": [], "judgments": {}}
@@ -185,13 +173,29 @@ def process_single_scenario(
             record = debate.run(**variant)
             results["debates"].append(record.to_dict())
 
-            if RunMode.JUDGE in run_mode:
-                judge = JudgeManager(record=record, judge_models=judge_models)
-                judge_results = judge.run()
-                for model, judgments in judge_results.items():
-                    if model not in results["judgments"]:
-                        results["judgments"][model] = []
-                    results["judgments"][model].extend(judgments)
+    if RunMode.JUDGE in run_mode:
+        debate_records = results["debates"]
+        if not debate_records and RunMode.DEBATE not in run_mode:
+            # Use the provided path to load existing debate records
+            if debate_records_path:
+                records_file = Path(debate_records_path) / f"{scenario.id}.json"
+                if records_file.exists():
+                    with open(records_file, "r", encoding="utf-8") as f:
+                        debate_records = json.load(f)
+                else:
+                    logger.warning(f"No debate records found for scenario {scenario.id}")
+                    return results
+            else:
+                logger.error("No debate_records_path provided for JUDGE mode")
+                return results
+
+        for record in debate_records:
+            judge = JudgeManager(record=record, judge_models=judge_models)
+            judge_results = judge.run()
+            for model, judgments in judge_results.items():
+                if model not in results["judgments"]:
+                    results["judgments"][model] = []
+                results["judgments"][model].extend(judgments)
 
     return results
 
@@ -226,6 +230,8 @@ def save_batch_results(results: List[Dict], batch_num: int, output_dir: str):
 
     # Save each result type
     for key, content in combined.items():
+        if not content:
+            continue
         filename = Path(output_dir) / f"{key}_batch_{batch_num}.json"
         with open(filename, "w", encoding="utf-8") as f:
             json.dump(content, f)
@@ -238,6 +244,7 @@ def process_batch(
     run_mode: RunMode,
     batch_num: int,
     output_dir: str,
+    debate_records_path: str = None,
     num_workers: int = None,
 ) -> None:
     """Process a batch of scenarios in parallel."""
@@ -251,12 +258,15 @@ def process_batch(
             debater_models=debater_models,
             judge_models=judge_models,
             run_mode=run_mode,
+            debate_records_path=debate_records_path,
         )
-        results = list(tqdm(
-            pool.imap(process_func, scenarios),
-            total=len(scenarios),
-            desc=f"Processing batch {batch_num}"
-        ))
+        results = list(
+            tqdm(
+                pool.imap(process_func, scenarios),
+                total=len(scenarios),
+                desc=f"Processing batch {batch_num}",
+            )
+        )
 
     # Save combined results
     save_batch_results(results, batch_num, output_dir)
@@ -269,6 +279,7 @@ def process_scenarios_in_batches(
     run_mode: RunMode = RunMode.ALL,
     batch_size: int = 5,
     output_dir: str = "results",
+    debate_records_path: str = None,
     num_workers: int = None,
 ) -> None:
     """Process scenarios in small batches with parallel processing."""
@@ -293,6 +304,7 @@ def process_scenarios_in_batches(
                     run_mode,
                     batch_num,
                     output_dir,
+                    debate_records_path,
                     num_workers,
                 )
                 batch = []
@@ -308,6 +320,7 @@ def process_scenarios_in_batches(
                 run_mode,
                 batch_num,
                 output_dir,
+                debate_records_path,
                 num_workers,
             )
             pbar.update(1)
@@ -335,7 +348,7 @@ MODEL_CONFIGS = {
 
 if __name__ == "__main__":
     # Add run configuration
-    RUN_MODE = RunMode.DEBATE | RunMode.JUDGE
+    RUN_MODE = RunMode.BASELINE
     # For example:
     # RUN_MODE = RunMode.BASELINE  # Only baseline
     # RUN_MODE = RunMode.DEBATE | RunMode.JUDGE  # Only debate and judge
@@ -357,6 +370,11 @@ if __name__ == "__main__":
         # Set up output directory for this configuration
         OUTPUT_DIR = f"results/{config_name}"
 
+        # Add debate records path if needed
+        DEBATE_RECORDS_PATH = None
+        if RunMode.JUDGE in RUN_MODE and RunMode.DEBATE not in RUN_MODE:
+            DEBATE_RECORDS_PATH = "path/to/debate/records"  # User should set this
+
         # Process scenarios in streaming fashion with parallel processing
         scenarios_stream = load_scenarios_stream(SAMPLED_DATA_PATH)
         process_scenarios_in_batches(
@@ -366,5 +384,6 @@ if __name__ == "__main__":
             RUN_MODE,
             batch_size=5,
             output_dir=OUTPUT_DIR,
+            debate_records_path=DEBATE_RECORDS_PATH,
             num_workers=4,
         )

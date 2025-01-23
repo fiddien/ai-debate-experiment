@@ -4,7 +4,7 @@ Shared type definitions for the debate system.
 
 from dataclasses import dataclass, field, asdict
 from enum import Enum
-from typing import List, Literal, Dict, Tuple
+from typing import List, Literal, Dict, Tuple, Any
 from uuid import uuid4
 
 
@@ -18,8 +18,26 @@ class DebaterNames(Enum):
         return f'{self.value}'
 
 
+class JsonSerializableMixin:
+    """Mixin to make dataclasses JSON serializable."""
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert the object to a JSON-serializable dictionary."""
+        def _convert(obj):
+            if isinstance(obj, Enum):
+                return str(obj)
+            elif hasattr(obj, 'to_dict'):
+                return obj.to_dict()
+            elif isinstance(obj, (list, tuple)):
+                return [_convert(x) for x in obj]
+            elif isinstance(obj, dict):
+                return {k: _convert(v) for k, v in obj.items()}
+            return obj
+
+        return {k: _convert(v) for k, v in asdict(self).items()}
+
+
 @dataclass(frozen=True)
-class DebateScenario:
+class DebateScenario(JsonSerializableMixin):
     """Structure of a debate scenario."""
 
     situation: str
@@ -27,13 +45,11 @@ class DebateScenario:
     answer_options: List[str]
     label: str
     id: str = field(default_factory=lambda: str(uuid4()))
+    level: str = ""
 
-    def to_dict(self):
-        """Return a JSON-able version of the data."""
-        return asdict(self)
 
 @dataclass
-class DebateContext:
+class DebateContext(JsonSerializableMixin):
     """Context for debate prompt construction."""
 
     situation: str
@@ -47,7 +63,7 @@ class DebateContext:
 
 
 @dataclass
-class DebateResponse:
+class DebateResponse(JsonSerializableMixin):
     """Structure of a debate transcript entry."""
 
     debate_round: int
@@ -59,7 +75,7 @@ class DebateResponse:
 
 
 @dataclass
-class DebateRecord:
+class DebateRecord(JsonSerializableMixin):
     """Structure of a complete debate record."""
 
     scenario: DebateScenario
@@ -70,13 +86,9 @@ class DebateRecord:
     id: str = field(default_factory=lambda: str(uuid4()))
     transcript: List[DebateResponse] = field(default_factory=list)
 
-    def to_dict(self):
-        """Return a JSON-able version of the data."""
-        return asdict(self)
-
 
 @dataclass
-class JudgeContext:
+class JudgeContext(JsonSerializableMixin):
     """Context for judge prompt construction."""
 
     question: str
@@ -88,7 +100,7 @@ class JudgeContext:
 
 
 @dataclass
-class JudgeResponse:
+class JudgeResponse(JsonSerializableMixin):
     """Structure of a judge's decision."""
 
     chosen_answer: Literal["A", "B"]
@@ -97,13 +109,9 @@ class JudgeResponse:
 
 
 @dataclass
-class JudgementResult:
+class JudgementResult(JsonSerializableMixin):
     """Structure of a judge's judgment result."""
 
     id: str
     judgment: str
     model: str
-
-    def to_dict(self):
-        """Return a JSON-able version of the data."""
-        return asdict(self)

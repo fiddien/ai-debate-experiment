@@ -53,8 +53,7 @@ class BaselineManager:
         for model in self.models:
             self.logger.info("Processing model: %s", model)
             judgment = self._get_response(model, messages)
-            model_key = f"{model}_baseline"
-            self.results[model_key] = [
+            self.results[model] = [
                 JudgementResult(
                     id=self.scenario.id,
                     judgment=judgment,
@@ -94,7 +93,6 @@ class BaselineManager:
         """Return the baseline evaluation results for specified model or all models."""
         self.logger.debug("Retrieving results for model: %s", model if model else "all")
         if model:
-            model_key = f"{model}_baseline"
-            result = self.results.get(model_key, [])
-            return {model_key: result.to_dict() if result else []}
+            result = self.results.get(model, [])
+            return {model: result.to_dict() if result else []}
         return self.results

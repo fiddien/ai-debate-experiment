@@ -2,7 +2,7 @@
 .conda/
 .env
 data/
-results/
+
 temp_results/
 BoardgameQA/
 Boardgame.zip
