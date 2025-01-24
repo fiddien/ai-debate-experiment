@@ -328,14 +328,14 @@ def process_scenarios_in_batches(
 
 # Model configurations
 MODEL_CONFIGS = {
-    "self-play-claude-3.5-haiku": {
-        "debater_models": ["claude-3-5-haiku-20241022", "claude-3-5-haiku-20241022"],
-        "judge_models": ["claude-3-5-haiku-20241022"],
-    },
-    # "self-play-claude-3.5-sonnet": {
-    #     "debater_models": ["claude-3-5-sonnet-20241022", "claude-3-5-sonnet-20241022"],
-    #     "judge_models": ["claude-3-5-sonnet-20241022"]
+    # "self-play-claude-3.5-haiku": {
+    #     "debater_models": ["claude-3-5-haiku-20241022", "claude-3-5-haiku-20241022"],
+    #     "judge_models": ["claude-3-5-haiku-20241022"],
     # },
+    "self-play-claude-3.5-sonnet": {
+        "debater_models": ["claude-3-5-sonnet-20241022", "claude-3-5-sonnet-20241022"],
+        "judge_models": ["claude-3-5-sonnet-20241022"]
+    },
     # "config2": {  # Stronger judge
     #     "debater_models": ["claude-3-5-haiku-20241022", "claude-3-haiku-20240307"],
     #     "judge_models": ["claude-3-sonnet-20240229"]

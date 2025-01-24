@@ -1,8 +1,7 @@
 .venv/
 .conda/
 .env
-data/
-
+results/self-play-claude-3.5-haiku/
 temp_results/
 BoardgameQA/
 Boardgame.zip
