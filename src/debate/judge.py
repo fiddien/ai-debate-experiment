@@ -22,7 +22,7 @@ class JudgeManager:
     def __init__(self, record: DebateRecord, judge_models: Optional[List[str]] = None):
         self.record = record
         self.judge_models = list(set(judge_models)) or []
-        self.results: Dict[str, List[JudgementResult]] = {}
+        self.results: Dict[str, JudgementResult] = {}
         self.logger = logging.getLogger(__name__)
         self.logger.info(
             "Initialized JudgeManager for debate %s with %d models",
@@ -67,7 +67,7 @@ class JudgeManager:
 
 
     @observe()
-    def run(self) -> Dict[str, List[JudgementResult]]:
+    def run(self) -> Dict[str, dict]:
         """Run judgment with caching and return results."""
         self.logger.info("Starting judgment phase")
 
@@ -75,11 +75,8 @@ class JudgeManager:
         cached_results = load_from_cache(self.cache_key)
         if cached_results:
             self.logger.info("Loading results from cache")
-            self.results = {
-                model: [JudgementResult(**r) for r in results]
-                for model, results in cached_results.items()
-            }
-            return self.results
+            self.results = cached_results
+            return cached_results
 
         langfuse_context.update_current_trace(
             tags=["judge"],
@@ -93,31 +90,27 @@ class JudgeManager:
         for model in self.judge_models:
             self.logger.info("Processing model: %s", model)
             judgment = self._get_judge_response(model, messages)
-            self.results[model] = [
-                JudgementResult(
-                    id=self.record.id,
-                    judgment=judgment,
-                    model=model,
-                )
-            ]
+            self.results[model] = JudgementResult(
+                id=self.record.id,
+                judgment=judgment,
+                model=model,
+            )
             self.logger.info("Completed judgment for model %s", model)
 
         # Save results to cache
         save_to_cache(
             self.cache_key,
-            {
-                model: [r.to_dict() for r in results]
-                for model, results in self.results.items()
-            },
+            {model: result.to_dict() for model, result in self.results.items()},
         )
 
-        return self.results
+        return {model: result.to_dict() for model, result in self.results.items()}
 
     def get_results(
         self, model: Optional[str] = None
-    ) -> Dict[str, List[JudgementResult]]:
+    ) -> Dict[str, JudgementResult]:
         """Get judgment results for specified model or all models."""
         self.logger.debug("Retrieving results for model: %s", model if model else "all")
         if model:
-            return {model: self.results.get(model, [])}
+            result = self.results.get(model)
+            return {model: result} if result else {}
         return self.results

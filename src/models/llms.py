@@ -68,52 +68,55 @@ def get_response(model: str, messages, **kwargs):
     input_tokens = 0
     output_tokens = 0
 
-    if model not in provider_of:
-        raise ValueError(f"Model {model} is not supported.")
+    try:
+        if model not in provider_of:
+            raise ValueError(f"Model {model} is not supported.")
 
-    if provider_of[model] == "Google":
-        messages = translate_to_google_schema(messages)
-        model_client = google_client.GenerativeModel(model)
-        chat = model_client.start_chat(history=messages[:-1])
-        response = chat.send_message(messages[-1])
-        result = response.text
-        input_tokens = response.usage_metadata.prompt_token_count
-        output_tokens = response.usage_metadata.candidates_token_count
+        if provider_of[model] == "Google":
+            messages = translate_to_google_schema(messages)
+            model_client = google_client.GenerativeModel(model)
+            chat = model_client.start_chat(history=messages[:-1])
+            response = chat.send_message(messages[-1])
+            result = response.text
+            input_tokens = response.usage_metadata.prompt_token_count
+            output_tokens = response.usage_metadata.candidates_token_count
 
-    elif provider_of[model] == "Anthropic":
-        if messages[0]["role"] == "system":
-            system_message = messages[0]["content"]
-            messages = messages[1:]
-        else:
-            system_message = ""
+        elif provider_of[model] == "Anthropic":
+            if messages[0]["role"] == "system":
+                system_message = messages[0]["content"]
+                messages = messages[1:]
+            else:
+                system_message = ""
 
-        response = anthropic_client.messages.create(
-            model=model,
-            max_tokens=1000,
-            temperature=0.1,
-            system=system_message,
-            messages=messages,
+            response = anthropic_client.messages.create(
+                model=model,
+                max_tokens=1000,
+                temperature=0.1,
+                system=system_message,
+                messages=messages,
+            )
+            result = response.content[0].text
+            input_tokens = response.usage.input_tokens
+            output_tokens = response.usage.output_tokens
+
+        elif provider_of[model] == "OpenAI":
+            response = openai_client.chat.completions.create(
+                model=model,
+                messages=messages,
+                max_tokens=1000,
+                temperature=0.1,
+            )
+            result = response.choices[0].message.content
+            input_tokens = response.usage.prompt_tokens
+            output_tokens = response.usage.completion_tokens
+
+        langfuse_context.update_current_observation(
+            usage_details={
+                "input": input_tokens,
+                "output": output_tokens
+            }
         )
-        result = response.content[0].text
-        input_tokens = response.usage.input_tokens
-        output_tokens = response.usage.output_tokens
-
-    elif provider_of[model] == "OpenAI":
-        response = openai_client.chat.completions.create(
-            model=model,
-            messages=messages,
-            max_tokens=1000,
-            temperature=0.1,
-        )
-        result = response.choices[0].message.content
-        input_tokens = response.usage.prompt_tokens
-        output_tokens = response.usage.completion_tokens
-
-    langfuse_context.update_current_observation(
-        usage_details={
-            "input": input_tokens,
-            "output": output_tokens
-        }
-    )
-
-    return result
+        return result
+    except Exception as e:
+        print(f"Error getting response from {model}: {str(e)}")
+        raise e

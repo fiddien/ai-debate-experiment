@@ -16,7 +16,7 @@ class BaselineManager:
     def __init__(self, scenario: DebateScenario, models: List[str]):
         self.scenario = scenario
         self.models = list(set(models))
-        self.results: Dict[str, List[JudgementResult]] = {}
+        self.results: Dict[str, JudgementResult] = {}  # model -> result
         self.logger = logging.getLogger(__name__)
         self.logger.info(
             "Initialized BaselineManager for scenario %s with %d models",
@@ -28,7 +28,7 @@ class BaselineManager:
         )
 
     @observe()
-    def run(self) -> Dict[str, List[JudgementResult]]:
+    def run(self) -> Dict[str, dict]:
         """Run baseline evaluation with caching and return results."""
         self.logger.info("Starting baseline evaluation")
 
@@ -36,11 +36,8 @@ class BaselineManager:
         cached_results = load_from_cache(self.cache_key)
         if cached_results:
             self.logger.info("Loading results from cache")
-            self.results = {
-                model: [JudgementResult(**r) for r in results]
-                for model, results in cached_results.items()
-            }
-            return self.results
+            self.results = cached_results
+            return cached_results
 
         langfuse_context.update_current_trace(
             tags=["baseline"],
@@ -53,25 +50,20 @@ class BaselineManager:
         for model in self.models:
             self.logger.info("Processing model: %s", model)
             judgment = self._get_response(model, messages)
-            self.results[model] = [
-                JudgementResult(
-                    id=self.scenario.id,
-                    judgment=judgment,
-                    model=model,
-                )
-            ]
+            self.results[model] = JudgementResult(
+                id=self.scenario.id,
+                judgment=judgment,
+                model=model,
+            )
             self.logger.info("Completed baseline for model %s", model)
 
         # Cache results
         save_to_cache(
             self.cache_key,
-            {
-                model: [r.to_dict() for r in results]
-                for model, results in self.results.items()
-            },
+            {model: result.to_dict() for model, result in self.results.items()},
         )
 
-        return self.results
+        return {model: result.to_dict() for model, result in self.results.items()}
 
     def _get_response(self, model: str, messages: List[Dict[str, Any]]) -> str:
         """Get response from specified model."""
@@ -89,10 +81,10 @@ class BaselineManager:
             self.logger.error("Error getting response from %s: %s", model, str(e))
             raise
 
-    def get_results(self, model: str = None) -> Dict[str, List[JudgementResult]]:
+    def get_results(self, model: str = None) -> Dict[str, JudgementResult]:
         """Return the baseline evaluation results for specified model or all models."""
         self.logger.debug("Retrieving results for model: %s", model if model else "all")
         if model:
-            result = self.results.get(model, [])
-            return {model: result.to_dict() if result else []}
+            result = self.results.get(model)
+            return {model: result} if result else {}
         return self.results

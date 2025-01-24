@@ -28,7 +28,7 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-
+DEFAULT_SAMPLE_PER_LABEL = 20
 # Dataset difficulty levels
 LEVELS = [
     # "ZeroConflict",
@@ -36,7 +36,8 @@ LEVELS = [
     # "Main",  # Medium
     "HighConflict",
 ]
-
+N = DEFAULT_SAMPLE_PER_LABEL * len(LEVELS) * 3  # 3 labels
+# N = 2  # For testing
 
 class RunMode(Flag):
     """Run modes for the debate experiments."""
@@ -57,7 +58,7 @@ def load_boardgame_qa(base_path: str = "BoardgameQA") -> dict:
     return ds
 
 
-def sample_data(ds: dict, samples_per_label: int = 20) -> dict:
+def sample_data(ds: dict, samples_per_label: int = DEFAULT_SAMPLE_PER_LABEL) -> dict:
     """Sample data with fixed size per label.
 
     Args:
@@ -150,17 +151,25 @@ def split_question(example: str) -> Tuple[str, str]:
 
 
 def get_result_paths(
-    base_dir: str = "results", config_name: str = None
+    base_dir: str = "results",
+    config_name: str = None,
+    reuse_debates_from: str = None,
 ) -> Dict[str, Path]:
     """Get paths for different result types."""
     base = Path(base_dir)
     if config_name:
-        return {
+        paths = {
             "scenarios": base / "scenarios",
-            "baseline": base / "baseline" / config_name,
+            "baseline": base / "baseline",
             "debates": base / "debates" / config_name,
             "judgments": base / "judgments" / config_name,
         }
+        if reuse_debates_from:
+            # Use the referenced config's debate path
+            paths["debates"] = base / "debates" / reuse_debates_from
+            # Put judgments under the same config as debates
+            paths["judgments"] = base / "judgments" / reuse_debates_from
+        return paths
     return {
         "scenarios": base / "scenarios",
         "baseline": base / "baseline",
@@ -202,26 +211,6 @@ def load_scenario(scenario_id: str, paths: Dict[str, Path]) -> DebateScenario:
         label=data["label"],
         id=data["id"],
     )
-
-
-def get_result_paths(
-    base_dir: str = "results", config_name: str = None
-) -> Dict[str, Path]:
-    """Get paths for different result types."""
-    base = Path(base_dir)
-    if config_name:
-        return {
-            "scenarios": base / "scenarios",
-            "baseline": base / "baseline" / config_name,
-            "debates": base / "debates" / config_name,
-            "judgments": base / "judgments" / config_name,
-        }
-    return {
-        "scenarios": base / "scenarios",
-        "baseline": base / "baseline",
-        "debates": base / "debates",
-        "judgments": base / "judgments",
-    }
 
 
 def load_existing_results(
@@ -311,11 +300,10 @@ def process_single_scenario(
             {"swap": False, "all_wrong": True},
         ]:
             record = debate.run(**variant)
-            record_dict = record.to_dict()
-            results["debates"].append(record_dict)
+            results["debates"].append(record)
             if result_paths:
                 save_result(
-                    record_dict,
+                    record,
                     "debates",
                     result_paths,
                     scenario.id,
@@ -351,36 +339,36 @@ def save_batch_results(results: List[Dict], result_paths: Dict[str, Path]):
 
     for result in results:
         # Save baseline results
-        for model, baseline_results in result.get("baseline", {}).items():
-            for b_result in baseline_results:
-                scenario_id = b_result["scenario_id"]
-                save_path = result_paths["baseline"] / model / f"{scenario_id}.json"
-                save_path.parent.mkdir(parents=True, exist_ok=True)
-                with open(save_path, "w", encoding="utf-8") as f:
-                    json.dump(b_result, f)
+        for model, b_result in result.get("baseline", {}).items():
+            scenario_id = b_result["id"]
+            save_path = result_paths["baseline"] / model / f"{scenario_id}.json"
+            save_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(save_path, "w", encoding="utf-8") as f:
+                json.dump(b_result, f)
 
+        record2scenario = {}
         # Save debate results
         for debate in result.get("debates", []):
             scenario_id = debate["scenario_id"]
             record_id = debate["id"]
+            record2scenario[record_id] = scenario_id
             save_path = result_paths["debates"] / f"{scenario_id}_{record_id}.json"
             save_path.parent.mkdir(parents=True, exist_ok=True)
             with open(save_path, "w", encoding="utf-8") as f:
                 json.dump(debate, f)
 
         # Save judgment results
-        for model, judgments in result.get("judgments", {}).items():
-            for judgment in judgments:
-                scenario_id = judgment["scenario_id"]
-                record_id = judgment["debate_id"]
-                save_path = (
-                    result_paths["judgments"]
-                    / model
-                    / f"{scenario_id}_{record_id}.json"
-                )
-                save_path.parent.mkdir(parents=True, exist_ok=True)
-                with open(save_path, "w") as f:
-                    json.dump(judgment, f)
+        for model, judgment in result.get("judgments", {}).items():
+            record_id = judgment["id"]
+            scenario_id = record2scenario[record_id]
+            save_path = (
+                result_paths["judgments"]
+                / model
+                / f"{scenario_id}_{record_id}.json"
+            )
+            save_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(save_path, "w") as f:
+                json.dump(judgment, f)
 
 
 def process_batch(
@@ -410,7 +398,7 @@ def process_batch(
         results = list(
             tqdm(
                 pool.imap(process_func, scenarios),
-                total=len(scenarios),
+                total=N,
                 desc=f"Processing batch {batch_num}",
             )
         )
@@ -434,9 +422,7 @@ def process_scenarios_in_batches(
     batch = []
     batch_num = 0
 
-    # Convert iterator to list to get total count for tqdm
-    scenarios = list(scenarios)
-    total_batches = (len(scenarios) + batch_size - 1) // batch_size
+    total_batches = (N + batch_size - 1) // batch_size
 
     with tqdm(total=total_batches, desc="Processing batches") as pbar:
         for scenario in scenarios:
@@ -473,20 +459,20 @@ def process_scenarios_in_batches(
 
 
 MODEL_CONFIGS = {
-    "self-play-claude-3.5-haiku": {  # This is the config name
-        "debater_models": ["claude-3-5-haiku-20241022", "claude-3-5-haiku-20241022"],
-        "judge_models": ["claude-3-5-haiku-20241022"],
-    },
-    "claude-3.5-sonnet-baseline-judge": {
-        "debater_models": None,  # No debaters needed, reusing debates
+    # "claude-3.5-haiku vs claude-3.5-haiku": {  # This is the config name
+    #     "debater_models": ["claude-3-5-haiku-20241022", "claude-3-5-haiku-20241022"],
+    #     "judge_models": ["claude-3-5-haiku-20241022"],
+    # },
+    "claude-3.5-sonnet on haikus": {
+        "debater_models": None,
         "judge_models": ["claude-3-5-sonnet-20241022"],
-        "reuse_debates_from": "self-play-claude-3.5-haiku",  # Reference to another config name
+        "reuse_debates_from": "claude-3.5-haiku vs claude-3.5-haiku",  # Reference to another config name
     },
 }
 
 if __name__ == "__main__":
     # Add run configuration
-    RUN_MODE = RunMode.BASELINE
+    RUN_MODE = RunMode.BASELINE | RunMode.JUDGE
     # For example:
     # RUN_MODE = RunMode.BASELINE  # Only baseline
     # RUN_MODE = RunMode.DEBATE | RunMode.JUDGE  # Only debate and judge
@@ -509,15 +495,14 @@ if __name__ == "__main__":
         JUDGE_MODELS = models["judge_models"]
         REUSE_DEBATES = models.get("reuse_debates_from")
 
-        # Set up paths for results, including scenarios
-        result_paths = get_result_paths("results", config_name)
+        # Set up paths for results with reuse_debates_from
+        result_paths = get_result_paths(
+            "results",
+            config_name,
+            reuse_debates_from=REUSE_DEBATES
+        )
         result_paths["scenarios"] = base_paths["scenarios"]
-
-        if REUSE_DEBATES:
-            # Update debates path to use existing results
-            result_paths["debates"] = (
-                get_result_paths("results")["debates"] / REUSE_DEBATES
-            )
+        print(result_paths)
 
         # Determine run mode based on configuration
         current_run_mode = RUN_MODE
@@ -536,6 +521,7 @@ if __name__ == "__main__":
 
         # Process scenarios in streaming fashion with parallel processing
         scenarios_stream = get_scenarios_stream(result_paths)
+
         process_scenarios_in_batches(
             scenarios_stream,
             DEBATER_MODELS,

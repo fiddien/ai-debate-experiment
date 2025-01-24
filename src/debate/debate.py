@@ -151,7 +151,7 @@ class DebateTwoPlayers:
     @observe()
     def run(
         self, swap: bool = False, all_wrong: bool = False, cooldown: int = 10
-    ) -> DebateRecord:
+    ) -> dict:
         """Run the debate with caching and return the record."""
         run_cache_key = generate_cache_key(
             self.cache_key.split(".")[0],
@@ -162,7 +162,7 @@ class DebateTwoPlayers:
         # Try loading from cache
         cached_record = load_from_cache(run_cache_key)
         if cached_record:
-            return DebateRecord(**cached_record)
+            return cached_record
 
         # Create new record
         record = DebateRecord(
@@ -213,5 +213,6 @@ class DebateTwoPlayers:
             time.sleep(cooldown)
 
         # Cache and return
-        save_to_cache(run_cache_key, record.to_dict())
-        return record
+        r_dict = record.to_dict()
+        save_to_cache(run_cache_key, r_dict)
+        return r_dict
