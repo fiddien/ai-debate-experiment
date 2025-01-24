@@ -92,47 +92,53 @@ def display_total(ds: dict):
             print(f"  - {label}: {len([ex for ex in data if ex['label'] == label])}")
 
 
-def save_sampled_data(data: dict, filepath: str):
-    """Save sampled dataset to JSONL file."""
-    Path(filepath).parent.mkdir(exist_ok=True)
-    with open(filepath, "w", encoding="utf-8") as f:
-        for level, examples in data.items():
-            for example in examples:
-                example["level"] = level  # Add level info to each example
-                f.write(json.dumps(example) + "\n")
+def save_sampled_data(data: dict, result_paths: Dict[str, Path]):
+    """Save sampled dataset directly as scenarios."""
+    scenarios_path = result_paths["scenarios"]
+    scenarios_path.mkdir(exist_ok=True)
+
+    for level, examples in data.items():
+        for example in examples:
+            situation, question = split_question(example["example"])
+            scenario = DebateScenario(
+                situation=situation,
+                question=question,
+                answer_options=["proved", "disproved", "unknown"],
+                label=example["label"],
+                id=hashlib.md5(example["example"].encode()).hexdigest(),
+            )
+            save_scenario(scenario, result_paths)
 
 
-def load_sampled_data(filepath: str) -> dict:
-    """Load sampled dataset from JSONL file."""
-    try:
-        data = defaultdict(list)
-        with open(filepath, "r", encoding="utf-8") as f:
-            for line in f:
-                example = json.loads(line.strip())
-                level = example.pop("level")  # Remove and get level info
-                data[level].append(example)
-        return dict(data)
-    except FileNotFoundError:
-        return None
+def get_scenarios_stream(result_paths: Dict[str, Path]) -> Generator[DebateScenario, None, None]:
+    """Stream existing scenarios from the organized directory."""
+    scenario_files = result_paths["scenarios"].glob("*.json")
+
+    for file_path in tqdm(list(scenario_files), desc="Loading scenarios"):
+        yield load_scenario(file_path.stem, result_paths)
 
 
-def load_scenarios_stream(filepath: str) -> Generator[DebateScenario, None, None]:
-    """Load and yield scenarios one at a time from JSONL file."""
+def load_scenarios_stream(
+    filepath: str, result_paths: Dict[str, Path]
+) -> Generator[DebateScenario, None, None]:
+    """Load and yield scenarios one at a time, saving them to organized files."""
     with open(filepath, "r", encoding="utf-8") as f:
-        # Count total lines first for tqdm
         total_lines = sum(1 for _ in f)
-        f.seek(0)  # Reset file pointer
+        f.seek(0)
 
         for line in tqdm(f, total=total_lines, desc="Loading scenarios"):
             game = json.loads(line.strip())
             situation, question = split_question(game["example"])
-            yield DebateScenario(
+            scenario = DebateScenario(
                 situation=situation,
                 question=question,
                 answer_options=["proved", "disproved", "unknown"],
                 label=game["label"],
                 id=hashlib.md5(game["example"].encode()).hexdigest(),
             )
+            # Save scenario to organized structure
+            save_scenario(scenario, result_paths)
+            yield scenario
 
 
 def split_question(example: str) -> Tuple[str, str]:
@@ -143,21 +149,155 @@ def split_question(example: str) -> Tuple[str, str]:
     return game, question
 
 
+def get_result_paths(
+    base_dir: str = "results", config_name: str = None
+) -> Dict[str, Path]:
+    """Get paths for different result types."""
+    base = Path(base_dir)
+    if config_name:
+        return {
+            "scenarios": base / "scenarios",
+            "baseline": base / "baseline" / config_name,
+            "debates": base / "debates" / config_name,
+            "judgments": base / "judgments" / config_name,
+        }
+    return {
+        "scenarios": base / "scenarios",
+        "baseline": base / "baseline",
+        "debates": base / "debates",
+        "judgments": base / "judgments",
+    }
+
+
+def save_scenario(scenario: DebateScenario, paths: Dict[str, Path]):
+    """Save scenario to a JSON file."""
+    save_path = paths["scenarios"] / f"{scenario.id}.json"
+    save_path.parent.mkdir(parents=True, exist_ok=True)
+
+    scenario_dict = {
+        "id": scenario.id,
+        "situation": scenario.situation,
+        "question": scenario.question,
+        "answer_options": scenario.answer_options,
+        "label": scenario.label,
+    }
+
+    with open(save_path, "w", encoding="utf-8") as f:
+        json.dump(scenario_dict, f)
+
+
+def load_scenario(scenario_id: str, paths: Dict[str, Path]) -> DebateScenario:
+    """Load scenario from a JSON file."""
+    scenario_path = paths["scenarios"] / f"{scenario_id}.json"
+    if not scenario_path.exists():
+        raise FileNotFoundError(f"No scenario file found for ID: {scenario_id}")
+
+    with open(scenario_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    return DebateScenario(
+        situation=data["situation"],
+        question=data["question"],
+        answer_options=data["answer_options"],
+        label=data["label"],
+        id=data["id"],
+    )
+
+
+def get_result_paths(
+    base_dir: str = "results", config_name: str = None
+) -> Dict[str, Path]:
+    """Get paths for different result types."""
+    base = Path(base_dir)
+    if config_name:
+        return {
+            "scenarios": base / "scenarios",
+            "baseline": base / "baseline" / config_name,
+            "debates": base / "debates" / config_name,
+            "judgments": base / "judgments" / config_name,
+        }
+    return {
+        "scenarios": base / "scenarios",
+        "baseline": base / "baseline",
+        "debates": base / "debates",
+        "judgments": base / "judgments",
+    }
+
+
+def load_existing_results(
+    scenario_id: str, paths: Dict[str, Path], config_name: str = None
+) -> Dict:
+    """Load existing debate records for a scenario."""
+    results = {"debates": []}
+
+    # Load debate records if they exist
+    if config_name:
+        debate_paths = list(
+            (paths["debates"] / config_name).glob(f"{scenario_id}*.json")
+        )
+    else:
+        debate_paths = list(paths["debates"].glob(f"**/{scenario_id}*.json"))
+
+    for path in debate_paths:
+        with open(path, "r", encoding="utf-8") as f:
+            results["debates"].append(json.load(f))
+
+    return results
+
+
+def save_result(
+    result: Dict,
+    result_type: str,
+    paths: Dict[str, Path],
+    scenario_id: str,
+    model_name: str = None,
+    record_id: str = None,
+    config_name: str = None,
+):
+    """Save a single result to the appropriate location."""
+    if result_type == "baseline":
+        save_path = paths["baseline"] / model_name / f"{scenario_id}.json"
+    elif result_type == "debates":
+        save_path = paths["debates"] / config_name / f"{scenario_id}_{record_id}.json"
+    elif result_type == "judgments":
+        save_path = (
+            paths["judgments"]
+            / config_name
+            / model_name
+            / f"{scenario_id}_{record_id}.json"
+        )
+    else:
+        raise ValueError(f"Unknown result type: {result_type}")
+
+    save_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(save_path, "w", encoding="utf-8") as f:
+        json.dump(result, f)
+
+
 def process_single_scenario(
     scenario: DebateScenario,
     debater_models: List[str],
     judge_models: List[str],
     run_mode: RunMode,
-    debate_records_path: str = None,
+    result_paths: Dict[str, Path] = None,
+    config_name: str = None,
 ) -> Dict:
-    """Process a single scenario and return all results."""
+    """Process a single scenario, optionally using existing debate results."""
     results = {"baseline": {}, "debates": [], "judgments": {}}
+
+    # Only load existing debate results if we're reusing them
+    if result_paths and RunMode.DEBATE not in run_mode:
+        existing_results = load_existing_results(scenario.id, result_paths, config_name)
+        results["debates"] = existing_results["debates"]
 
     if RunMode.BASELINE in run_mode:
         baseline = BaselineManager(scenario=scenario, models=judge_models)
         results["baseline"] = baseline.run()
+        if result_paths:
+            for model, result in results["baseline"].items():
+                save_result(result, "baseline", result_paths, scenario.id, model)
 
-    if RunMode.DEBATE in run_mode:
+    if RunMode.DEBATE in run_mode and not results["debates"]:
         debate = DebateTwoPlayers(
             scenario=scenario,
             debater_models=debater_models,
@@ -171,70 +311,76 @@ def process_single_scenario(
             {"swap": False, "all_wrong": True},
         ]:
             record = debate.run(**variant)
-            results["debates"].append(record.to_dict())
+            record_dict = record.to_dict()
+            results["debates"].append(record_dict)
+            if result_paths:
+                save_result(
+                    record_dict,
+                    "debates",
+                    result_paths,
+                    scenario.id,
+                    record_id=record.id,
+                    config_name=config_name,
+                )
 
     if RunMode.JUDGE in run_mode:
-        debate_records = results["debates"]
-        if not debate_records and RunMode.DEBATE not in run_mode:
-            # Use the provided path to load existing debate records
-            if debate_records_path:
-                records_file = Path(debate_records_path) / f"{scenario.id}.json"
-                if records_file.exists():
-                    with open(records_file, "r", encoding="utf-8") as f:
-                        debate_records = json.load(f)
-                else:
-                    logger.warning(f"No debate records found for scenario {scenario.id}")
-                    return results
-            else:
-                logger.error("No debate_records_path provided for JUDGE mode")
-                return results
-
-        for record in debate_records:
+        for record in results["debates"]:
             judge = JudgeManager(record=record, judge_models=judge_models)
             judge_results = judge.run()
             for model, judgments in judge_results.items():
                 if model not in results["judgments"]:
                     results["judgments"][model] = []
                 results["judgments"][model].extend(judgments)
+                if result_paths:
+                    for judgment in judgments:
+                        save_result(
+                            judgment,
+                            "judgments",
+                            result_paths,
+                            scenario.id,
+                            model,
+                            record["id"],
+                            config_name=config_name,
+                        )
 
     return results
 
 
-def save_batch_results(results: List[Dict], batch_num: int, output_dir: str):
-    """Save batch results to files."""
-    Path(output_dir).mkdir(exist_ok=True)
+def save_batch_results(results: List[Dict], result_paths: Dict[str, Path]):
+    """Save batch results according to the organized directory structure."""
 
-    # Combine results from all scenarios in batch
-    combined = {"baseline": {}, "debates": [], "judgments": {}}
+    for result in results:
+        # Save baseline results
+        for model, baseline_results in result.get("baseline", {}).items():
+            for b_result in baseline_results:
+                scenario_id = b_result["scenario_id"]
+                save_path = result_paths["baseline"] / model / f"{scenario_id}.json"
+                save_path.parent.mkdir(parents=True, exist_ok=True)
+                with open(save_path, "w", encoding="utf-8") as f:
+                    json.dump(b_result, f)
 
-    for r in results:
-        # Ensure all objects are converted to dictionaries
-        combined["debates"].extend(
-            [
-                debate if isinstance(debate, dict) else debate.to_dict()
-                for debate in r["debates"]
-            ]
-        )
+        # Save debate results
+        for debate in result.get("debates", []):
+            scenario_id = debate["scenario_id"]
+            record_id = debate["id"]
+            save_path = result_paths["debates"] / f"{scenario_id}_{record_id}.json"
+            save_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(save_path, "w", encoding="utf-8") as f:
+                json.dump(debate, f)
 
-        # Merge baseline and judgment results
-        for key in ["baseline", "judgments"]:
-            for model, items in r[key].items():
-                if model not in combined[key]:
-                    combined[key][model] = []
-                combined[key][model].extend(
-                    [
-                        item if isinstance(item, dict) else item.to_dict()
-                        for item in items
-                    ]
+        # Save judgment results
+        for model, judgments in result.get("judgments", {}).items():
+            for judgment in judgments:
+                scenario_id = judgment["scenario_id"]
+                record_id = judgment["debate_id"]
+                save_path = (
+                    result_paths["judgments"]
+                    / model
+                    / f"{scenario_id}_{record_id}.json"
                 )
-
-    # Save each result type
-    for key, content in combined.items():
-        if not content:
-            continue
-        filename = Path(output_dir) / f"{key}_batch_{batch_num}.json"
-        with open(filename, "w", encoding="utf-8") as f:
-            json.dump(content, f)
+                save_path.parent.mkdir(parents=True, exist_ok=True)
+                with open(save_path, "w") as f:
+                    json.dump(judgment, f)
 
 
 def process_batch(
@@ -243,9 +389,9 @@ def process_batch(
     judge_models: List[str],
     run_mode: RunMode,
     batch_num: int,
-    output_dir: str,
-    debate_records_path: str = None,
+    result_paths: Dict[str, Path] = None,
     num_workers: int = None,
+    config_name: str = None,
 ) -> None:
     """Process a batch of scenarios in parallel."""
     if num_workers is None:
@@ -258,7 +404,8 @@ def process_batch(
             debater_models=debater_models,
             judge_models=judge_models,
             run_mode=run_mode,
-            debate_records_path=debate_records_path,
+            result_paths=result_paths,
+            config_name=config_name,
         )
         results = list(
             tqdm(
@@ -269,7 +416,7 @@ def process_batch(
         )
 
     # Save combined results
-    save_batch_results(results, batch_num, output_dir)
+    save_batch_results(results, result_paths)
 
 
 def process_scenarios_in_batches(
@@ -278,12 +425,11 @@ def process_scenarios_in_batches(
     judge_models: List[str],
     run_mode: RunMode = RunMode.ALL,
     batch_size: int = 5,
-    output_dir: str = "results",
-    debate_records_path: str = None,
+    result_paths: Dict[str, Path] = None,
     num_workers: int = None,
+    config_name: str = None,
 ) -> None:
     """Process scenarios in small batches with parallel processing."""
-    Path(output_dir).mkdir(exist_ok=True)
 
     batch = []
     batch_num = 0
@@ -303,9 +449,9 @@ def process_scenarios_in_batches(
                     judge_models,
                     run_mode,
                     batch_num,
-                    output_dir,
-                    debate_records_path,
+                    result_paths,
                     num_workers,
+                    config_name,
                 )
                 batch = []
                 batch_num += 1
@@ -319,31 +465,23 @@ def process_scenarios_in_batches(
                 judge_models,
                 run_mode,
                 batch_num,
-                output_dir,
-                debate_records_path,
+                result_paths,
                 num_workers,
+                config_name,
             )
             pbar.update(1)
 
 
-# Model configurations
 MODEL_CONFIGS = {
-    # "self-play-claude-3.5-haiku": {
-    #     "debater_models": ["claude-3-5-haiku-20241022", "claude-3-5-haiku-20241022"],
-    #     "judge_models": ["claude-3-5-haiku-20241022"],
-    # },
-    "self-play-claude-3.5-sonnet": {
-        "debater_models": ["claude-3-5-sonnet-20241022", "claude-3-5-sonnet-20241022"],
-        "judge_models": ["claude-3-5-sonnet-20241022"]
+    "self-play-claude-3.5-haiku": {  # This is the config name
+        "debater_models": ["claude-3-5-haiku-20241022", "claude-3-5-haiku-20241022"],
+        "judge_models": ["claude-3-5-haiku-20241022"],
     },
-    # "config2": {  # Stronger judge
-    #     "debater_models": ["claude-3-5-haiku-20241022", "claude-3-haiku-20240307"],
-    #     "judge_models": ["claude-3-sonnet-20240229"]
-    # },
-    # "config3": {  # Stronger debaters
-    #     "debater_models": ["claude-3-sonnet-20240229", "claude-3-sonnet-20240229"],
-    #     "judge_models": ["claude-3-haiku-20240307"]
-    # }
+    "claude-3.5-sonnet-baseline-judge": {
+        "debater_models": None,  # No debaters needed, reusing debates
+        "judge_models": ["claude-3-5-sonnet-20241022"],
+        "reuse_debates_from": "self-play-claude-3.5-haiku",  # Reference to another config name
+    },
 }
 
 if __name__ == "__main__":
@@ -354,21 +492,42 @@ if __name__ == "__main__":
     # RUN_MODE = RunMode.DEBATE | RunMode.JUDGE  # Only debate and judge
     # RUN_MODE = RunMode.BASELINE | RunMode.DEBATE  # Only baseline and debate
 
-    SAMPLED_DATA_PATH = "data/sampled_boardgame_qa.jsonl"  # Changed extension to .jsonl
+    SAMPLED_DATA_PATH = "data/sampled_boardgame_qa.jsonl"
     # Check if sampled data exists
     if not os.path.exists(SAMPLED_DATA_PATH):
         save_sampled_data(sample_data(load_boardgame_qa()), SAMPLED_DATA_PATH)
+
+    # Set up common paths first
+    base_paths = get_result_paths("results")
 
     # Run experiments for each configuration
     for config_name, models in MODEL_CONFIGS.items():
         print(f"\nRunning experiments for {config_name}")
 
         # Set up models for this configuration
-        DEBATER_MODELS = models["debater_models"]
+        DEBATER_MODELS = models.get("debater_models")
         JUDGE_MODELS = models["judge_models"]
+        REUSE_DEBATES = models.get("reuse_debates_from")
+
+        # Set up paths for results, including scenarios
+        result_paths = get_result_paths("results", config_name)
+        result_paths["scenarios"] = base_paths["scenarios"]
+
+        if REUSE_DEBATES:
+            # Update debates path to use existing results
+            result_paths["debates"] = (
+                get_result_paths("results")["debates"] / REUSE_DEBATES
+            )
+
+        # Determine run mode based on configuration
+        current_run_mode = RUN_MODE
+        if REUSE_DEBATES:
+            # Remove DEBATE from run mode if we're reusing debates
+            current_run_mode &= ~RunMode.DEBATE
 
         # Set up output directory for this configuration
         OUTPUT_DIR = f"results/{config_name}"
+        os.makedirs(OUTPUT_DIR, exist_ok=True)
 
         # Add debate records path if needed
         DEBATE_RECORDS_PATH = None
@@ -376,14 +535,14 @@ if __name__ == "__main__":
             DEBATE_RECORDS_PATH = "path/to/debate/records"  # User should set this
 
         # Process scenarios in streaming fashion with parallel processing
-        scenarios_stream = load_scenarios_stream(SAMPLED_DATA_PATH)
+        scenarios_stream = get_scenarios_stream(result_paths)
         process_scenarios_in_batches(
             scenarios_stream,
             DEBATER_MODELS,
             JUDGE_MODELS,
-            RUN_MODE,
+            current_run_mode,
             batch_size=5,
-            output_dir=OUTPUT_DIR,
-            debate_records_path=DEBATE_RECORDS_PATH,
+            result_paths=result_paths,
             num_workers=4,
+            config_name=config_name,
         )
