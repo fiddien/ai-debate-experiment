@@ -69,12 +69,12 @@ class JudgeManager:
     @observe()
     def run(self) -> Dict[str, dict]:
         """Run judgment with caching and return results."""
-        self.logger.info("Starting judgment phase")
+        self.logger.debug("Starting judgment phase")
 
         # Try loading from cache
         cached_results = load_from_cache(self.cache_key)
         if cached_results:
-            self.logger.info("Loading results from cache")
+            self.logger.debug("Loading results from cache")
             self.results = cached_results
             return cached_results
 
@@ -88,14 +88,14 @@ class JudgeManager:
         messages = self._create_judge_messages()
 
         for model in self.judge_models:
-            self.logger.info("Processing model: %s", model)
+            self.logger.debug("Processing model: %s", model)
             judgment = self._get_judge_response(model, messages)
             self.results[model] = JudgementResult(
                 id=self.record.id,
                 judgment=judgment,
                 model=model,
             )
-            self.logger.info("Completed judgment for model %s", model)
+            self.logger.info("Completed judgement from model %s", model)
 
         # Save results to cache
         save_to_cache(
