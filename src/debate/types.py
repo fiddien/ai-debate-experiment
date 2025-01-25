@@ -110,8 +110,8 @@ class JudgeResponse(JsonSerializableMixin):
 
 @dataclass
 class JudgementResult(JsonSerializableMixin):
-    """Structure of a judge's judgment result."""
+    """Structure of a judge's judgement result."""
 
     id: str
-    judgment: str
+    judgement: str
     model: str

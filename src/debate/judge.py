@@ -17,7 +17,7 @@ from .types import (
 
 
 class JudgeManager:
-    """Manages judgment operations for debates."""
+    """Manages judgement operations for debates."""
 
     def __init__(self, record: DebateRecord, judge_models: Optional[List[str]] = None):
         self.record = record
@@ -68,8 +68,8 @@ class JudgeManager:
 
     @observe()
     def run(self) -> Dict[str, dict]:
-        """Run judgment with caching and return results."""
-        self.logger.debug("Starting judgment phase")
+        """Run judgement with caching and return results."""
+        self.logger.debug("Starting judgement phase")
 
         # Try loading from cache
         cached_results = load_from_cache(self.cache_key)
@@ -84,15 +84,15 @@ class JudgeManager:
             user_id=self.record.scenario.id,
         )
 
-        # Run normal judgment if not cached
+        # Run normal judgement if not cached
         messages = self._create_judge_messages()
 
         for model in self.judge_models:
             self.logger.debug("Processing model: %s", model)
-            judgment = self._get_judge_response(model, messages)
+            judgement = self._get_judge_response(model, messages)
             self.results[model] = JudgementResult(
                 id=self.record.id,
-                judgment=judgment,
+                judgement=judgement,
                 model=model,
             )
             self.logger.info("Completed judgement from model %s", model)
@@ -108,7 +108,7 @@ class JudgeManager:
     def get_results(
         self, model: Optional[str] = None
     ) -> Dict[str, JudgementResult]:
-        """Get judgment results for specified model or all models."""
+        """Get judgement results for specified model or all models."""
         self.logger.debug("Retrieving results for model: %s", model if model else "all")
         if model:
             result = self.results.get(model)

@@ -49,10 +49,10 @@ class BaselineManager:
 
         for model in self.models:
             self.logger.debug("Processing model: %s", model)
-            judgment = self._get_response(model, messages)
+            judgement = self._get_response(model, messages)
             self.results[model] = JudgementResult(
                 id=self.scenario.id,
-                judgment=judgment,
+                judgement=judgement,
                 model=model,
             )
             self.logger.info("Completed baseline answer from model %s", model)

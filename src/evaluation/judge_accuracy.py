@@ -11,7 +11,7 @@ ANSWER_MAP = {
 def evaluate_judge_accuracy(
     qa_path="data/sampled_boardgame_qa.jsonl",
     debates_file="results/self-play-claude-3.5-haiku/debates_batch_0.json",
-    judgments_file="results/self-play-claude-3.5-haiku/judgments_batch_0.json",
+    judgements_file="results/self-play-claude-3.5-haiku/judgements_batch_0.json",
 ):
     # Load scenarios keyed by 'example'
     scenarios = {}
@@ -37,19 +37,19 @@ def evaluate_judge_accuracy(
     except FileNotFoundError:
         pass
 
-    # Load judgments and evaluate
+    # Load judgements and evaluate
     correct = 0
     total = 0
     try:
-        with open(judgments_file, "r", encoding="utf-8") as f:
+        with open(judgements_file, "r", encoding="utf-8") as f:
             data = json.load(f)
         for entry in data:
             debate_id = entry["id"]
-            judgment_text = entry["judgment"]
+            judgement_text = entry["judgement"]
             # Extract the final "Answer: X"
             # Example: "...Answer: A"
-            if "Answer:" in judgment_text:
-                ans_letter = judgment_text.split("Answer:")[-1].strip()[0]
+            if "Answer:" in judgement_text:
+                ans_letter = judgement_text.split("Answer:")[-1].strip()[0]
                 predicted_label = ANSWER_MAP.get(ans_letter, "unknown")
 
                 # Match scenario label
@@ -63,4 +63,4 @@ def evaluate_judge_accuracy(
         pass
 
     accuracy = correct / total if total else 0.0
-    print(f"Judge accuracy: {accuracy*100:.2f}% (based on {total} judgments)")
+    print(f"Judge accuracy: {accuracy*100:.2f}% (based on {total} judgements)")
