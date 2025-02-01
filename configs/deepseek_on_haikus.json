@@ -1,6 +1,6 @@
 {
     "deepseek on haikus": {
-        "run_mode": "BASELINE|JUDGE",
+        "run_mode": ["BASELINE", "JUDGE"],
         "debater_models": null,
         "judge_models": ["deepseek-chat"],
         "reuse_debates_from": "claude-3.5-haiku vs claude-3.5-haiku"

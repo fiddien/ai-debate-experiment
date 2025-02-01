@@ -51,7 +51,8 @@ EXCLUDED_LABELS = ["unknown"]
 N = DEFAULT_SAMPLE_PER_LABEL * len(LEVELS) * 3  # 3 labels
 
 OUTPUT_DIR = "results"
-VARIATION = "" # "P2"
+VARIATION = ""  # "P2"
+
 
 def load_boardgame_qa(base_path: str = "BoardgameQA") -> dict:
     """Load BoardgameQA dataset from json files."""
@@ -392,27 +393,65 @@ def process_single_scenario(
 
 def parse_args():
     """Parse command line arguments."""
-    parser = argparse.ArgumentParser(description="Run debate experiments with BoardgameQA dataset.")
-    parser.add_argument("--sampled-data-path", default="data/sampled_boardgame_qa.jsonl",
-                      help="Path to sampled data file")
-    parser.add_argument("--samples-per-label", type=int, default=20,
-                      help="Number of samples per label")
-    parser.add_argument("--levels", nargs="+", default=["LowConflict", "HighConflict"],
-                      help="Difficulty levels to use")
-    parser.add_argument("--excluded-labels", nargs="+", default=["unknown"],
-                      help="Labels to exclude from processing")
-    parser.add_argument("--output-dir", default="results",
-                      help="Output directory for results")
-    parser.add_argument("--variation", default="",
-                      help="Optional variation suffix for output directories")
-    parser.add_argument("--config-file", required=True,
-                      help="Path to experiment configurations JSON file")
+    parser = argparse.ArgumentParser(
+        description="Run debate experiments with BoardgameQA dataset."
+    )
+    parser.add_argument(
+        "--sampled-data-path",
+        default="data/sampled_boardgame_qa.jsonl",
+        help="Path to sampled data file",
+    )
+    parser.add_argument(
+        "--samples-per-label", type=int, default=20, help="Number of samples per label"
+    )
+    parser.add_argument(
+        "--levels",
+        nargs="+",
+        default=["LowConflict", "HighConflict"],
+        help="Difficulty levels to use",
+    )
+    parser.add_argument(
+        "--excluded-labels",
+        nargs="+",
+        default=["unknown"],
+        help="Labels to exclude from processing",
+    )
+    parser.add_argument(
+        "--output-dir", default="results", help="Output directory for results"
+    )
+    parser.add_argument(
+        "--variation",
+        default="",
+        help="Optional variation suffix for output directories",
+    )
+    parser.add_argument(
+        "--config-file",
+        required=True,
+        help="Path to experiment configurations JSON file",
+    )
     return parser.parse_args()
+
 
 def load_experiment_configs(config_file):
     """Load experiment configurations from JSON file."""
-    with open(config_file, 'r') as f:
+    with open(config_file, "r") as f:
         return json.load(f)
+
+
+def parse_run_mode(mode_config) -> RunMode:
+    """Convert config run_mode value to RunMode flag."""
+    if isinstance(mode_config, str):
+        mode_config = [mode_config]
+
+    run_mode = RunMode(0)  # Start with empty flag
+    for mode in mode_config:
+        try:
+            run_mode |= RunMode[mode.upper()]
+        except KeyError:
+            raise ValueError(f"Invalid run mode: {mode}")
+
+    return run_mode if run_mode else RunMode.ALL
+
 
 def main():
     """Main execution function for the debate experiments."""
@@ -440,7 +479,7 @@ def main():
         print(f"Running experiments for '{config_name}'")
 
         # Set up models for this configuration
-        run_mode = config.get("run_mode", RunMode.ALL)
+        run_mode = parse_run_mode(config.get("run_mode", "ALL"))
         debater_models = config.get("debater_models")
         judge_models = config["judge_models"]
         reuse_debates = config.get("reuse_debates_from")
