@@ -228,7 +228,7 @@ def get_result_paths(
         paths["judgements"] = base / f"judgements{variation}" / reuse_debates_from
     elif config:
         paths["debates"] = base / "debates" / config
-        paths["debates"] = base / f"judgements{variation}" / config
+        paths["judgements"] = base / f"judgements{variation}" / config
     return paths
 
 
@@ -429,6 +429,12 @@ def parse_args():
         required=True,
         help="Path to experiment configurations JSON file",
     )
+    parser.add_argument(
+        "--num-workers",
+        type=int,
+        default=1,
+        help="Number of worker processes (defaults to 1)",
+    )
     return parser.parse_args()
 
 
@@ -504,7 +510,7 @@ def main():
             run_mode,
             result_paths,
             batch_size=5,
-            num_workers=2,
+            num_workers=args.num_workers,
         )
         print()
 
