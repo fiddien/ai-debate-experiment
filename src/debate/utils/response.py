@@ -15,23 +15,29 @@ def extract_argument(text: str) -> str:
     """
     match = re.search(r"<argument>(.*?)</argument>", text, re.DOTALL)
 
-    if not match:
-        # For incomplete arguments, e.g. "<argument>Some text"
-        logger.warning("Incomplete argument tags found in response text")
-        match = re.search(r"<argument>(.*?)", text, re.DOTALL)
+    if match:
+        return match.group(1).strip()
 
-    if not match:
-        # Extract only the thinking tags, including the tags themselves
-        # exclude that then treat the rest of the text as the argument
-        thinking_match = re.search(r"<thinking>.*?</thinking>", text, re.DOTALL)
-        if thinking_match:
-            text = text.replace(thinking_match.group(0), "")
-            return text.strip()
+    logger.warning("Incomplete argument tags found in response text")
 
-    if not match:
-        logger.error("No argument found in response text")
-        return text.strip()
-    return match.group(1).strip()
+    match = re.search(r"<argument>(.*?)(</argument>|$)", text, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+
+    # Extract only the argument tags, including the tags themselves
+    split_ = text.split("<argument>")
+    if len(split_) > 1:
+        split_ = split_[1].split("</argument>")
+        if len(split_) > 1:
+            return split_[0].strip()
+        return split_[0].strip()
+
+    split_ = text.split("</thinking>")
+    if len(split_) > 1:
+        return split_[1].strip()
+
+    logger.warning("No argument found in response text, return full text: %s", text)
+    return text
 
 def validate_citations(text: str, situation: str) -> str:
     """Validate citations in debate text and mark them as valid/invalid."""
