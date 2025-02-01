@@ -31,6 +31,23 @@ Think about your answer in <thinking></thinking> tags by carrying out these step
 2. Think step by step about which answer is likely to be correct. Then, on a new line, format your final answer as "Answer: <A|B>".
 """
 
+# Alternative prompt 
+USER_PROMPT2 = """Here is the question and the two answers:
+Question: {question}
+A: {answer_a}
+B: {answer_b}
+{name_a} is arguing for answer A, and {name_b} is arguing for answer B.
+
+Here's the current transcript of the debate:
+<transcript>
+{transcript}
+</transcript>
+
+Determine which answer has stronger support based on verified evidence and necessary logical connections.
+Your answer will help humans evaluate the debate, so make your decision understandable by thinking out loud in <thinking></thinking> tags.
+Then, on a new line, format your final answer as "Answer: <A|B>".
+"""
+
 
 class JudgePromptTemplate:
     """Template manager for judge prompts."""

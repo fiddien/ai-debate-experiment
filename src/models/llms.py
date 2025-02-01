@@ -8,10 +8,14 @@ import google.generativeai as google_client
 from anthropic import Anthropic
 from openai import OpenAI
 from langfuse.decorators import observe, langfuse_context
+from dotenv import load_dotenv
+
+load_dotenv()
 
 google_client.configure(api_key=environ.get("GOOGLE_API_KEY"))
 anthropic_client = Anthropic(api_key=environ.get("ANTHROPIC_API_KEY"))
 openai_client = OpenAI(api_key=environ.get("OPENAI_API_KEY"))
+deepseek_client = OpenAI(api_key=environ.get("DEEPSEEK_API_KEY"), base_url="https://api.deepseek.com")
 
 provider_models = {
     "OpenAI": ["o1", "o1-mini", "gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo"],
@@ -101,6 +105,17 @@ def get_response(model: str, messages, **kwargs):
 
         elif provider_of[model] == "OpenAI":
             response = openai_client.chat.completions.create(
+                model=model,
+                messages=messages,
+                max_tokens=1000,
+                temperature=0.1,
+            )
+            result = response.choices[0].message.content
+            input_tokens = response.usage.prompt_tokens
+            output_tokens = response.usage.completion_tokens
+
+        elif provider_of[model] == "DeepSeek":
+            response = deepseek_client.chat.completions.create(
                 model=model,
                 messages=messages,
                 max_tokens=1000,

@@ -23,7 +23,7 @@ from src.debate.judge import JudgeManager
 from src.debate.types import DebateScenario, DebateRecord, DebateResponse
 
 logging.basicConfig(
-    format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO
+    format="%(asctime)s - %(levelname)s - %(message)s", level=logging.WARNING
 )
 
 logger = logging.getLogger(__name__)
@@ -46,21 +46,47 @@ LEVELS = [
     # "Main",  # Medium
     "HighConflict",
 ]
+EXCLUDED_LABELS = ["unknown"]
 N = DEFAULT_SAMPLE_PER_LABEL * len(LEVELS) * 3  # 3 labels
 
 OUTPUT_DIR = "results"
+VARIATION = ""
+# VARIATION = "USER_PROMPT2"
 EXPERIMENT_CONFIGS = {
     # "claude-3.5-haiku vs claude-3.5-haiku": {
     #     "run_mode": RunMode.DEBATE,
     #     "debater_models": ["claude-3-5-haiku-20241022", "claude-3-5-haiku-20241022"],
     #     "judge_models": ["claude-3-5-haiku-20241022"],
     # },
-    "claude-3.5-sonnet on haikus": {
-        "run_mode": RunMode.JUDGE,
-        "debater_models": None,
+    # "claude-3.5-sonnet on haikus": {
+    #     "run_mode": RunMode.JUDGE,
+    #     "debater_models": None,
+    #     "judge_models": ["claude-3-5-sonnet-20241022"],
+    #     "reuse_debates_from": "claude-3.5-haiku vs claude-3.5-haiku",
+    # },
+    # "deepseek on haikus": {
+    #     "run_mode": RunMode.BASELINE | RunMode.JUDGE,
+    #     "debater_models": None,
+    #     "judge_models": ["deepseek-chat"],
+    #     "reuse_debates_from": "claude-3.5-haiku vs claude-3.5-haiku",
+    # },
+    # "claude-3.5-sonnet on haikus USER_PROMPT2": {
+    #     "run_mode": RunMode.JUDGE,
+    #     "debater_models": None,
+    #     "judge_models": ["claude-3-5-sonnet-20241022"],
+    #     "reuse_debates_from": "claude-3.5-haiku vs claude-3.5-haiku",
+    # },
+    "claude-3.5-sonnet self-play": {
+        "run_mode": RunMode.DEBATE,
+        "debater_models": ["claude-3-5-sonnet-20241022", "claude-3-5-sonnet-20241022"],
         "judge_models": ["claude-3-5-sonnet-20241022"],
-        "reuse_debates_from": "claude-3.5-haiku vs claude-3.5-haiku",
     },
+    # "deepseek on haikus USER_PROMPT2": {
+    #     "run_mode": RunMode.JUDGE,
+    #     "debater_models": None,
+    #     "judge_models": ["deepseek-chat"],
+    #     "reuse_debates_from": "claude-3.5-haiku vs claude-3.5-haiku",
+    # },
 }
 
 
@@ -155,6 +181,8 @@ def load_scenarios_stream(
         for line in tqdm(f, total=total_lines, desc="Loading scenarios"):
             game = json.loads(line.strip())
             situation, question = split_question(game["example"])
+            if game["label"] in EXCLUDED_LABELS:
+                continue
             scenario = DebateScenario(
                 situation=situation,
                 question=question,
@@ -219,22 +247,24 @@ def get_result_paths(
     base_dir: str = "results",
     config: str = None,
     reuse_debates_from: str = None,
+    variation: str = "",
 ) -> Dict[str, Path]:
     """Get paths for different result types."""
     os.makedirs(base_dir, exist_ok=True)
     base = Path(base_dir)
+    variation = f"_{variation}" if variation else ""
     paths = {
         "scenarios": base / "scenarios",
-        "baseline": base / "baseline",
+        "baselines": base / f"baselines{variation}",
         "debates": base / "debates",
-        "judgements": base / "judgements",
+        "judgements": base / f"judgements{variation}",
     }
     if reuse_debates_from:
         paths["debates"] = base / "debates" / reuse_debates_from
-        paths["judgements"] = base / "judgements" / reuse_debates_from
+        paths["judgements"] = base / f"judgements{variation}" / reuse_debates_from
     elif config:
         paths["debates"] = base / "debates" / config
-        paths["debates"] = base / "judgements" / config
+        paths["debates"] = base / f"judgements{variation}" / config
     return paths
 
 
@@ -247,8 +277,8 @@ def save_result(
     record_id: str = None,
 ):
     """Save a single result to the appropriate location."""
-    if result_type == "baseline":
-        save_path = paths["baseline"] / model_name / f"{scenario_id}.json"
+    if result_type == "baselines":
+        save_path = paths["baselines"] / model_name / f"{scenario_id}.json"
     elif result_type == "debates":
         save_path = paths["debates"] / f"{scenario_id}_{record_id}.json"
     elif result_type == "judgements":
@@ -346,7 +376,7 @@ def process_single_scenario(
     if RunMode.BASELINE in run_mode:
         baseline = BaselineManager(scenario=scenario, models=judge_models)
         for model, result in baseline.run().items():
-            save_result(result, "baseline", result_paths, scenario.id, model)
+            save_result(result, "baselines", result_paths, scenario.id, model)
 
     if RunMode.DEBATE in run_mode and not debate_results:
         debate = DebateTwoPlayers(
@@ -415,7 +445,10 @@ def main():
 
         # Set up paths for results with reuse_debates_from
         result_paths = get_result_paths(
-            OUTPUT_DIR, config_name, reuse_debates_from=reuse_debates
+            OUTPUT_DIR,
+            config_name,
+            reuse_debates_from=reuse_debates,
+            variation=VARIATION,
         )
 
         if reuse_debates:
