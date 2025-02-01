@@ -1,0 +1,9 @@
+
+{
+    "gpt-4o on haikus": {
+        "run_mode": "BASELINE",
+        "debater_models": null,
+        "judge_models": ["gpt-4o-2024-11-20"],
+        "reuse_debates_from": "claude-3.5-haiku vs claude-3.5-haiku"
+    }
+}

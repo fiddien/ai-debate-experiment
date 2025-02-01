@@ -9,6 +9,7 @@ import multiprocessing as mp
 import os
 import random
 import re
+import argparse
 from collections import defaultdict
 from enum import Flag, auto
 from functools import partial
@@ -23,7 +24,7 @@ from src.debate.judge import JudgeManager
 from src.debate.types import DebateScenario, DebateRecord, DebateResponse
 
 logging.basicConfig(
-    format="%(asctime)s - %(levelname)s - %(message)s", level=logging.WARNING
+    format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO
 )
 
 logger = logging.getLogger(__name__)
@@ -50,45 +51,7 @@ EXCLUDED_LABELS = ["unknown"]
 N = DEFAULT_SAMPLE_PER_LABEL * len(LEVELS) * 3  # 3 labels
 
 OUTPUT_DIR = "results"
-VARIATION = ""
-# VARIATION = "USER_PROMPT2"
-EXPERIMENT_CONFIGS = {
-    # "claude-3.5-haiku vs claude-3.5-haiku": {
-    #     "run_mode": RunMode.DEBATE,
-    #     "debater_models": ["claude-3-5-haiku-20241022", "claude-3-5-haiku-20241022"],
-    #     "judge_models": ["claude-3-5-haiku-20241022"],
-    # },
-    # "claude-3.5-sonnet on haikus": {
-    #     "run_mode": RunMode.JUDGE,
-    #     "debater_models": None,
-    #     "judge_models": ["claude-3-5-sonnet-20241022"],
-    #     "reuse_debates_from": "claude-3.5-haiku vs claude-3.5-haiku",
-    # },
-    # "deepseek on haikus": {
-    #     "run_mode": RunMode.BASELINE | RunMode.JUDGE,
-    #     "debater_models": None,
-    #     "judge_models": ["deepseek-chat"],
-    #     "reuse_debates_from": "claude-3.5-haiku vs claude-3.5-haiku",
-    # },
-    # "claude-3.5-sonnet on haikus USER_PROMPT2": {
-    #     "run_mode": RunMode.JUDGE,
-    #     "debater_models": None,
-    #     "judge_models": ["claude-3-5-sonnet-20241022"],
-    #     "reuse_debates_from": "claude-3.5-haiku vs claude-3.5-haiku",
-    # },
-    "claude-3.5-sonnet self-play": {
-        "run_mode": RunMode.DEBATE,
-        "debater_models": ["claude-3-5-sonnet-20241022", "claude-3-5-sonnet-20241022"],
-        "judge_models": ["claude-3-5-sonnet-20241022"],
-    },
-    # "deepseek on haikus USER_PROMPT2": {
-    #     "run_mode": RunMode.JUDGE,
-    #     "debater_models": None,
-    #     "judge_models": ["deepseek-chat"],
-    #     "reuse_debates_from": "claude-3.5-haiku vs claude-3.5-haiku",
-    # },
-}
-
+VARIATION = "" # "P2"
 
 def load_boardgame_qa(base_path: str = "BoardgameQA") -> dict:
     """Load BoardgameQA dataset from json files."""
@@ -427,8 +390,47 @@ def process_single_scenario(
                 )
 
 
+def parse_args():
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(description="Run debate experiments with BoardgameQA dataset.")
+    parser.add_argument("--sampled-data-path", default="data/sampled_boardgame_qa.jsonl",
+                      help="Path to sampled data file")
+    parser.add_argument("--samples-per-label", type=int, default=20,
+                      help="Number of samples per label")
+    parser.add_argument("--levels", nargs="+", default=["LowConflict", "HighConflict"],
+                      help="Difficulty levels to use")
+    parser.add_argument("--excluded-labels", nargs="+", default=["unknown"],
+                      help="Labels to exclude from processing")
+    parser.add_argument("--output-dir", default="results",
+                      help="Output directory for results")
+    parser.add_argument("--variation", default="",
+                      help="Optional variation suffix for output directories")
+    parser.add_argument("--config-file", required=True,
+                      help="Path to experiment configurations JSON file")
+    return parser.parse_args()
+
+def load_experiment_configs(config_file):
+    """Load experiment configurations from JSON file."""
+    with open(config_file, 'r') as f:
+        return json.load(f)
+
 def main():
     """Main execution function for the debate experiments."""
+    args = parse_args()
+
+    # Update global variables with command line arguments
+    global SAMPLED_DATA_PATH, DEFAULT_SAMPLE_PER_LABEL, LEVELS, EXCLUDED_LABELS
+    global OUTPUT_DIR, VARIATION, N
+
+    SAMPLED_DATA_PATH = args.sampled_data_path
+    DEFAULT_SAMPLE_PER_LABEL = args.samples_per_label
+    LEVELS = args.levels
+    EXCLUDED_LABELS = args.excluded_labels
+    OUTPUT_DIR = args.output_dir
+    VARIATION = args.variation
+    N = DEFAULT_SAMPLE_PER_LABEL * len(LEVELS) * 3  # 3 labels
+
+    EXPERIMENT_CONFIGS = load_experiment_configs(args.config_file)
 
     # Check if sampled data exists
     if not os.path.exists(SAMPLED_DATA_PATH):

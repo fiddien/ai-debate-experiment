@@ -1,0 +1,8 @@
+{
+    "deepseek on haikus USER_PROMPT2": {
+        "run_mode": "JUDGE",
+        "debater_models": null,
+        "judge_models": ["deepseek-chat"],
+        "reuse_debates_from": "claude-3.5-haiku vs claude-3.5-haiku"
+    }
+}
