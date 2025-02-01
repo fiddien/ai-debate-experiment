@@ -1,8 +1,8 @@
 {
-    "deepseek on haikus": {
+    "gemini-1.5-flash on haikus": {
         "run_mode": ["BASELINE", "JUDGE"],
         "debater_models": null,
-        "judge_models": ["deepseek-chat"],
+        "judge_models": ["gemini-1.5-flash"],
         "reuse_debates_from": "haiku-haiku"
     }
 }

@@ -1,8 +1,9 @@
+
 {
-    "deepseek on haikus": {
+    "gpt-4o on haikus": {
         "run_mode": ["BASELINE", "JUDGE"],
         "debater_models": null,
-        "judge_models": ["deepseek-chat"],
+        "judge_models": ["deepseek-reasoner"],
         "reuse_debates_from": "haiku-haiku"
     }
 }

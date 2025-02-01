@@ -1,5 +1,5 @@
 {
-    "claude-3.5-haiku vs claude-3.5-haiku": {
+    "haiku-haiku": {
         "run_mode": "DEBATE",
         "debater_models": [
             "claude-3-5-haiku-20241022",

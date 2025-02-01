@@ -3,6 +3,6 @@
         "run_mode": "JUDGE",
         "debater_models": null,
         "judge_models": ["claude-3-5-sonnet-20241022"],
-        "reuse_debates_from": "claude-3.5-haiku vs claude-3.5-haiku"
+        "reuse_debates_from": "haiku-haiku"
     }
 }
