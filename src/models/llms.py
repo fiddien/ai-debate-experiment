@@ -2,13 +2,17 @@
 TODO: Add a description of the module.
 """
 
+import time
+from functools import wraps
 from os import environ
 
 import google.generativeai as google_client
 from anthropic import Anthropic
-from openai import OpenAI
-from langfuse.decorators import observe, langfuse_context
+from anthropic import RateLimitError as AnthropicRateLimitError
 from dotenv import load_dotenv
+from langfuse.decorators import langfuse_context, observe
+from openai import OpenAI
+from openai import RateLimitError as OpenAIRateLimitError
 
 load_dotenv()
 
@@ -37,7 +41,7 @@ provider_models = {
         "gemini-1.5-flash",
         "gemini-1.5-flash-8b",
     ],
-    "DeepSeek": ["deepseek-chat"],
+    "DeepSeek": ["deepseek-chat", "deepseek-reasoner"],
     "Groq": [
         "mixtral-8x7b-32768",
         "llama-3.3-70b-versatile",
@@ -68,9 +72,52 @@ def translate_to_google_schema(messages):
     return google_schema
 
 
+class RateLimitError(Exception):
+    """Custom rate limit error."""
+
+    def __init__(self, provider: str, message: str):
+        self.provider = provider
+        self.message = message
+        super().__init__(f"{provider} API rate limit exceeded: {message}")
+
+
 @observe(as_type="generation")
-def get_response(model: str, messages, **kwargs):
+def get_response(model: str, messages, max_retries=3, initial_delay=10, **kwargs):
     """Generate a response from the model."""
+
+    def retry_with_exponential_backoff(provider):
+        def decorator(func):
+            @wraps(func)
+            def wrapper(*args, **kwargs):
+                delay = initial_delay
+                last_exception = None
+
+                for attempt in range(max_retries):
+                    try:
+                        return func(*args, **kwargs)
+                    except Exception as e:
+                        is_rate_limit = (
+                            isinstance(e, (OpenAIRateLimitError, AnthropicRateLimitError)) or
+                            (provider == "Google" and "429" in str(e))
+                        )
+
+                        if is_rate_limit:
+                            last_exception = RateLimitError(provider, str(e))
+                            if attempt < max_retries - 1:
+                                print(
+                                    f"Rate limit hit for {provider}, retrying in {delay} seconds..."
+                                )
+                                time.sleep(delay)
+                                delay *= 2
+                                continue
+                        raise e
+
+                raise last_exception
+
+            return wrapper
+
+        return decorator
+
     langfuse_context.update_current_observation(
         model=model,
         input=messages,
@@ -85,50 +132,72 @@ def get_response(model: str, messages, **kwargs):
             raise ValueError(f"Model {model} is not supported.")
 
         if provider_of[model] == "Google":
-            messages = translate_to_google_schema(messages)
-            model_client = google_client.GenerativeModel(model)
-            chat = model_client.start_chat(history=messages[:-1])
-            response = chat.send_message(messages[-1])
+
+            @retry_with_exponential_backoff("Google")
+            def google_call():
+                messages_schema = translate_to_google_schema(messages)
+                model_client = google_client.GenerativeModel(model)
+                chat = model_client.start_chat(history=messages_schema[:-1])
+                return chat.send_message(messages_schema[-1])
+
+            response = google_call()
             result = response.text
             input_tokens = response.usage_metadata.prompt_token_count
             output_tokens = response.usage_metadata.candidates_token_count
 
         elif provider_of[model] == "Anthropic":
-            if messages[0]["role"] == "system":
-                system_message = messages[0]["content"]
-                messages = messages[1:]
-            else:
-                system_message = ""
 
-            response = anthropic_client.messages.create(
-                model=model,
-                max_tokens=1000,
-                temperature=0.1,
-                system=system_message,
-                messages=messages,
-            )
+            @retry_with_exponential_backoff("Anthropic")
+            def anthropic_call():
+                system_message = (
+                    messages[0]["content"] if messages[0]["role"] == "system" else ""
+                )
+                msgs = messages[1:] if messages[0]["role"] == "system" else messages
+                return anthropic_client.messages.create(
+                    model=model,
+                    max_tokens=2000,
+                    temperature=0.1,
+                    system=system_message,
+                    messages=msgs,
+                )
+
+            response = anthropic_call()
             result = response.content[0].text
             input_tokens = response.usage.input_tokens
             output_tokens = response.usage.output_tokens
 
         elif provider_of[model] == "OpenAI":
-            response = openai_client.chat.completions.create(
-                model=model,
-                messages=messages,
-                max_tokens=1000,
-                temperature=0.1,
-            )
+
+            @retry_with_exponential_backoff("OpenAI")
+            def openai_call():
+                return openai_client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=0.1,
+                )
+
+            response = openai_call()
+            if hasattr(response.choices[0].message, "reasoning_content"):
+                reasoning = response.choices[0].message.reasoning_content
+                print(f"Reasoning: {reasoning}")
             result = response.choices[0].message.content
             input_tokens = response.usage.prompt_tokens
             output_tokens = response.usage.completion_tokens
 
         elif provider_of[model] == "DeepSeek":
-            response = deepseek_client.chat.completions.create(
-                model=model,
-                messages=messages,
-                max_tokens=1000,
-                temperature=0.1,
-            )
+
+            @retry_with_exponential_backoff("DeepSeek")
+            def deepseek_call():
+                return deepseek_client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=0.1,
+                )
+
+            response = deepseek_call()
+            if hasattr(response.choices[0].message, "reasoning_content"):
+                reasoning = response.choices[0].message.reasoning_content
+                print(f"Reasoning: {reasoning}")
             result = response.choices[0].message.content
             input_tokens = response.usage.prompt_tokens
             output_tokens = response.usage.completion_tokens
