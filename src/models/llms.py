@@ -15,10 +15,17 @@ load_dotenv()
 google_client.configure(api_key=environ.get("GOOGLE_API_KEY"))
 anthropic_client = Anthropic(api_key=environ.get("ANTHROPIC_API_KEY"))
 openai_client = OpenAI(api_key=environ.get("OPENAI_API_KEY"))
-deepseek_client = OpenAI(api_key=environ.get("DEEPSEEK_API_KEY"), base_url="https://api.deepseek.com")
+deepseek_client = OpenAI(
+    api_key=environ.get("DEEPSEEK_API_KEY"), base_url="https://api.deepseek.com"
+)
 
 provider_models = {
-    "OpenAI": ["o1", "o1-mini", "gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo"],
+    "OpenAI": [
+        "o1-2024-12-17",
+        "o1-mini-2024-09-12",
+        "gpt-4o-2024-11-20",
+        "gpt-4o-mini-2024-07-18",
+    ],
     "Anthropic": [
         "claude-3-5-sonnet-20241022",
         "claude-3-5-haiku-20241022",
@@ -42,7 +49,8 @@ provider_of = {
     model: provider for provider, models in provider_models.items() for model in models
 }
 
-__all__ = ['get_response', 'provider_models', 'provider_of']
+__all__ = ["get_response", "provider_models", "provider_of"]
+
 
 def translate_to_google_schema(messages):
     """Change the message format to Google Gemini schema."""
@@ -126,10 +134,7 @@ def get_response(model: str, messages, **kwargs):
             output_tokens = response.usage.completion_tokens
 
         langfuse_context.update_current_observation(
-            usage_details={
-                "input": input_tokens,
-                "output": output_tokens
-            }
+            usage_details={"input": input_tokens, "output": output_tokens}
         )
         return result
     except Exception as e:

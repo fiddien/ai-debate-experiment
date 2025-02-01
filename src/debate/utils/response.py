@@ -8,12 +8,30 @@ from ..types import DebateResponse
 logger = logging.getLogger(__name__)
 
 def extract_argument(text: str) -> str:
-    """Extract the argument from the response text."""
+    """
+    Extract the argument from the response text.
+    Example text:
+    "<thinking>Some thinkings...</thinking>\n\n<argument>Some argument</argument>"
+    """
     match = re.search(r"<argument>(.*?)</argument>", text, re.DOTALL)
+
+    if not match:
+        # For incomplete arguments, e.g. "<argument>Some text"
+        logger.warning("Incomplete argument tags found in response text")
+        match = re.search(r"<argument>(.*?)", text, re.DOTALL)
+
+    if not match:
+        # Extract only the thinking tags, including the tags themselves
+        # exclude that then treat the rest of the text as the argument
+        thinking_match = re.search(r"<thinking>.*?</thinking>", text, re.DOTALL)
+        if thinking_match:
+            text = text.replace(thinking_match.group(0), "")
+            return text.strip()
+
     if not match:
         logger.error("No argument found in response text")
-        return text
-    return match.group(1)
+        return text.strip()
+    return match.group(1).strip()
 
 def validate_citations(text: str, situation: str) -> str:
     """Validate citations in debate text and mark them as valid/invalid."""
