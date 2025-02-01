@@ -61,3 +61,5 @@ python main.py --config-file configs/gpt4_on_haikus.json --samples-per-label 30 
 ```
 
 [^1]: Kazemi, M., Yuan, Q., Bhatia, D., Kim, N., Xu, X., Imbrasaite, V., & Ramachandran, D. (2024). Boardgameqa: A dataset for natural language reasoning with contradictory information. *Advances in Neural Information Processing Systems*, 36. [[Link](https://proceedings.neurips.cc/paper_files/paper/2023/hash/7adce80e86aa841490e6307109094de5-Abstract-Datasets_and_Benchmarks.html)]
+
+[^2]: Khan, A., Hughes, J., Valentine, D., Ruis, L., Sachan, K., Radhakrishnan, A., ... & Perez, E. (2024). Debating with more persuasive llms leads to more truthful answers. *arXiv preprint arXiv:2402.06782*. [[Link](https://arxiv.org/abs/2402.06782)]
