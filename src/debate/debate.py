@@ -150,7 +150,7 @@ class DebateTwoPlayers:
 
     @observe()
     def run(
-        self, swap: bool = False, all_wrong: bool = False, cooldown: int = 10
+        self, swap: bool = False, all_wrong: bool = False, cooldown: int = 15
     ) -> dict:
         """Run the debate with caching and return the record."""
         run_cache_key = generate_cache_key(
@@ -209,8 +209,8 @@ class DebateTwoPlayers:
                     )
                 )
                 self.logger.debug("Completed turn %d for %s", turn, name)
+                time.sleep(cooldown)
             self.logger.debug("Completed round %d", debate_round)
-            time.sleep(cooldown)
 
         # Cache and return
         r_dict = record.to_dict()
