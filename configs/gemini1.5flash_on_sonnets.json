@@ -1,0 +1,8 @@
+{
+    "gemini-1.5-flash on sonnets": {
+        "run_mode": "JUDGE",
+        "debater_models": null,
+        "judge_models": ["gemini-1.5-flash"],
+        "reuse_debates_from": "sonnet-sonnet"
+    }
+}

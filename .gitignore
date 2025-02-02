@@ -1,9 +1,12 @@
 .venv/
 .conda/
 .env
-results/self-play-claude-3.5-haiku/
-temp_results/
-temp_results2/
+__pycache__/
+
 BoardgameQA/
 Boardgame.zip
-__pycache__/
+temp_results*
+results/baselines/
+results/debates/
+results/judgements/
+results/judgements_USER_PROMPT2/

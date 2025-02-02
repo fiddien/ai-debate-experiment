@@ -150,7 +150,7 @@ class DebateTwoPlayers:
 
     @observe()
     def run(
-        self, swap: bool = False, all_wrong: bool = False, cooldown: int = 15
+        self, swap: bool = False, all_wrong: bool = False, cooldown: int = 5
     ) -> dict:
         """Run the debate with caching and return the record."""
         run_cache_key = generate_cache_key(
@@ -181,9 +181,9 @@ class DebateTwoPlayers:
 
         # Run debate rounds
         for debate_round in range(1, self.max_debate_rounds + 1):
-            self.logger.debug("Starting round %d", debate_round)
+            self.logger.info("Starting round %d", debate_round)
             for turn, name in enumerate(self.debater_names, start=1):
-                self.logger.debug("Turn %d: %s's move", turn, name)
+                self.logger.info("Turn %d: %s's move", turn, name)
                 messages = self._create_messages(
                     self.scenario,
                     name,

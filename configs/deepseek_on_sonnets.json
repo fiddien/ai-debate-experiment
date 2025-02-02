@@ -1,0 +1,8 @@
+{
+    "deepseek on sonnets": {
+        "run_mode": "JUDGE",
+        "debater_models": null,
+        "judge_models": ["deepseek-chat"],
+        "reuse_debates_from": "sonnet-sonnet"
+    }
+}

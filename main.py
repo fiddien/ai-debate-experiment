@@ -355,7 +355,7 @@ def process_single_scenario(
             {"swap": True, "all_wrong": False},
             {"swap": False, "all_wrong": True},
         ]:
-            record = debate.run(**variant)
+            record = debate.run(cooldown=3, **variant)
             debate_results.append(record)
             save_result(
                 record,
@@ -367,6 +367,8 @@ def process_single_scenario(
 
     if RunMode.JUDGE in run_mode:
         for record in debate_results:
+            if not record.get("record_id"):
+                record["record_id"] = record["id"]
             judge = JudgeManager(
                 record=DebateRecord(
                     scenario=scenario,
@@ -432,8 +434,8 @@ def parse_args():
     parser.add_argument(
         "--num-workers",
         type=int,
-        default=1,
-        help="Number of worker processes (defaults to 1)",
+        default=None,
+        help="Number of worker processes (defaults to half of CPU cores)",
     )
     return parser.parse_args()
 

@@ -1,0 +1,9 @@
+
+{
+    "gpt-4o on sonnets": {
+        "run_mode": ["BASELINE", "JUDGE"],
+        "debater_models": null,
+        "judge_models": ["gpt-4o-2024-11-20"],
+        "reuse_debates_from": "sonnet-sonnet"
+    }
+}

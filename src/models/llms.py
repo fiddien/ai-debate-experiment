@@ -5,7 +5,7 @@ TODO: Add a description of the module.
 import time
 from functools import wraps
 from os import environ
-
+from json.decoder import JSONDecodeError
 import google.generativeai as google_client
 from anthropic import Anthropic
 from anthropic import RateLimitError as AnthropicRateLimitError
@@ -90,16 +90,20 @@ def get_response(model: str, messages, max_retries=3, initial_delay=10, **kwargs
             @wraps(func)
             def wrapper(*args, **kwargs):
                 delay = initial_delay
-                last_exception = None
+                last_exception = BaseException()
 
                 for attempt in range(max_retries):
                     try:
                         return func(*args, **kwargs)
+                    except JSONDecodeError as e:
+                        time.sleep(delay)
+                        print(f"JSONDecodeError: {str(e)}")
+                        delay *= 2
+                        continue
                     except Exception as e:
-                        is_rate_limit = (
-                            isinstance(e, (OpenAIRateLimitError, AnthropicRateLimitError)) or
-                            (provider == "Google" and "429" in str(e))
-                        )
+                        is_rate_limit = isinstance(
+                            e, (OpenAIRateLimitError, AnthropicRateLimitError)
+                        ) or (provider == "Google" and "429" in str(e))
 
                         if is_rate_limit:
                             last_exception = RateLimitError(provider, str(e))

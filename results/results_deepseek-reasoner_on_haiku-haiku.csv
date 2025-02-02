@@ -1,0 +1,2 @@
+scenario_id,record_id,level,correct_debater_pos,label,baseline,judge,chosen_debater,a_quote_acc,a_quote_num,b_quote_acc,b_quote_num,chosen_debater_quote_acc_diff
+01e8feaa80c08cd2188a9ab3e1b8be5e,3787fe8f-16ae-4db5-b242-3d76edb2063c,LowConflict,-1,disproved,disproved,proved,2,0.42857142857142855,7,0.9090909090909091,11,0.4805194805194805

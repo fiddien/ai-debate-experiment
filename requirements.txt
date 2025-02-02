@@ -1,0 +1,7 @@
+pandas
+matplotlib
+scipy
+pathlib
+anthropic
+openai
+google-generativeai
