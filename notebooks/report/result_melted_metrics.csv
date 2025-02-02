@@ -1,0 +1,121 @@
+Debate,Model,Level,Label,Count,Metric,Score,Type
+haiku-haiku,Claude 3.5 Haiku,Low Conflict,Proved,40,Accuracy,70.0,Baseline
+haiku-haiku,Claude 3.5 Haiku,Low Conflict,Disproved,40,Accuracy,25.0,Baseline
+haiku-haiku,Claude 3.5 Haiku,Low Conflict,Unknown,40,Accuracy,65.0,Baseline
+haiku-haiku,Claude 3.5 Haiku,High Conflict,Proved,40,Accuracy,35.0,Baseline
+haiku-haiku,Claude 3.5 Haiku,High Conflict,Disproved,40,Accuracy,20.0,Baseline
+haiku-haiku,Claude 3.5 Haiku,High Conflict,Unknown,40,Accuracy,60.0,Baseline
+haiku-haiku,Claude 3.5 Sonnet,Low Conflict,Proved,40,Accuracy,90.0,Baseline
+haiku-haiku,Claude 3.5 Sonnet,Low Conflict,Disproved,40,Accuracy,70.0,Baseline
+haiku-haiku,Claude 3.5 Sonnet,Low Conflict,Unknown,40,Accuracy,80.0,Baseline
+haiku-haiku,Claude 3.5 Sonnet,High Conflict,Proved,40,Accuracy,40.0,Baseline
+haiku-haiku,Claude 3.5 Sonnet,High Conflict,Disproved,40,Accuracy,65.0,Baseline
+haiku-haiku,Claude 3.5 Sonnet,High Conflict,Unknown,40,Accuracy,70.0,Baseline
+haiku-haiku,DeepSeek V3,Low Conflict,Proved,40,Accuracy,85.0,Baseline
+haiku-haiku,DeepSeek V3,Low Conflict,Disproved,40,Accuracy,50.0,Baseline
+haiku-haiku,DeepSeek V3,Low Conflict,Unknown,40,Accuracy,55.00000000000001,Baseline
+haiku-haiku,DeepSeek V3,High Conflict,Proved,40,Accuracy,35.0,Baseline
+haiku-haiku,DeepSeek V3,High Conflict,Disproved,40,Accuracy,55.00000000000001,Baseline
+haiku-haiku,DeepSeek V3,High Conflict,Unknown,40,Accuracy,65.0,Baseline
+haiku-haiku,Gemini 1.5 Flash,Low Conflict,Proved,40,Accuracy,75.0,Baseline
+haiku-haiku,Gemini 1.5 Flash,Low Conflict,Disproved,40,Accuracy,70.0,Baseline
+haiku-haiku,Gemini 1.5 Flash,Low Conflict,Unknown,40,Accuracy,75.0,Baseline
+haiku-haiku,Gemini 1.5 Flash,High Conflict,Proved,40,Accuracy,45.0,Baseline
+haiku-haiku,Gemini 1.5 Flash,High Conflict,Disproved,40,Accuracy,25.0,Baseline
+haiku-haiku,Gemini 1.5 Flash,High Conflict,Unknown,40,Accuracy,75.0,Baseline
+haiku-haiku,GPT-4o,Low Conflict,Proved,40,Accuracy,95.0,Baseline
+haiku-haiku,GPT-4o,Low Conflict,Disproved,40,Accuracy,75.0,Baseline
+haiku-haiku,GPT-4o,Low Conflict,Unknown,40,Accuracy,55.00000000000001,Baseline
+haiku-haiku,GPT-4o,High Conflict,Proved,40,Accuracy,40.0,Baseline
+haiku-haiku,GPT-4o,High Conflict,Disproved,40,Accuracy,55.00000000000001,Baseline
+haiku-haiku,GPT-4o,High Conflict,Unknown,40,Accuracy,40.0,Baseline
+sonnet-sonnet,Claude 3.5 Haiku,Low Conflict,Proved,40,Accuracy,70.0,Baseline
+sonnet-sonnet,Claude 3.5 Haiku,Low Conflict,Disproved,40,Accuracy,25.0,Baseline
+sonnet-sonnet,Claude 3.5 Haiku,Low Conflict,Unknown,40,Accuracy,65.0,Baseline
+sonnet-sonnet,Claude 3.5 Haiku,High Conflict,Proved,40,Accuracy,35.0,Baseline
+sonnet-sonnet,Claude 3.5 Haiku,High Conflict,Disproved,40,Accuracy,20.0,Baseline
+sonnet-sonnet,Claude 3.5 Haiku,High Conflict,Unknown,40,Accuracy,60.0,Baseline
+sonnet-sonnet,Claude 3.5 Sonnet,Low Conflict,Proved,40,Accuracy,90.0,Baseline
+sonnet-sonnet,Claude 3.5 Sonnet,Low Conflict,Disproved,40,Accuracy,70.0,Baseline
+sonnet-sonnet,Claude 3.5 Sonnet,Low Conflict,Unknown,40,Accuracy,80.0,Baseline
+sonnet-sonnet,Claude 3.5 Sonnet,High Conflict,Proved,40,Accuracy,40.0,Baseline
+sonnet-sonnet,Claude 3.5 Sonnet,High Conflict,Disproved,40,Accuracy,65.0,Baseline
+sonnet-sonnet,Claude 3.5 Sonnet,High Conflict,Unknown,40,Accuracy,70.0,Baseline
+sonnet-sonnet,DeepSeek V3,Low Conflict,Proved,18,Accuracy,88.88888888888889,Baseline
+sonnet-sonnet,DeepSeek V3,Low Conflict,Disproved,17,Accuracy,58.82352941176471,Baseline
+sonnet-sonnet,DeepSeek V3,Low Conflict,Unknown,10,Accuracy,60.0,Baseline
+sonnet-sonnet,DeepSeek V3,High Conflict,Proved,10,Accuracy,20.0,Baseline
+sonnet-sonnet,DeepSeek V3,High Conflict,Disproved,12,Accuracy,66.66666666666666,Baseline
+sonnet-sonnet,DeepSeek V3,High Conflict,Unknown,14,Accuracy,71.42857142857143,Baseline
+sonnet-sonnet,Gemini 1.5 Flash,Low Conflict,Proved,40,Accuracy,75.0,Baseline
+sonnet-sonnet,Gemini 1.5 Flash,Low Conflict,Disproved,40,Accuracy,70.0,Baseline
+sonnet-sonnet,Gemini 1.5 Flash,Low Conflict,Unknown,40,Accuracy,75.0,Baseline
+sonnet-sonnet,Gemini 1.5 Flash,High Conflict,Proved,40,Accuracy,45.0,Baseline
+sonnet-sonnet,Gemini 1.5 Flash,High Conflict,Disproved,40,Accuracy,25.0,Baseline
+sonnet-sonnet,Gemini 1.5 Flash,High Conflict,Unknown,40,Accuracy,75.0,Baseline
+sonnet-sonnet,GPT-4o,Low Conflict,Proved,40,Accuracy,95.0,Baseline
+sonnet-sonnet,GPT-4o,Low Conflict,Disproved,40,Accuracy,75.0,Baseline
+sonnet-sonnet,GPT-4o,Low Conflict,Unknown,40,Accuracy,55.00000000000001,Baseline
+sonnet-sonnet,GPT-4o,High Conflict,Proved,40,Accuracy,40.0,Baseline
+sonnet-sonnet,GPT-4o,High Conflict,Disproved,40,Accuracy,55.00000000000001,Baseline
+sonnet-sonnet,GPT-4o,High Conflict,Unknown,40,Accuracy,40.0,Baseline
+haiku-haiku,Claude 3.5 Haiku,Low Conflict,Proved,40,Accuracy,50.0,Judge
+haiku-haiku,Claude 3.5 Haiku,Low Conflict,Disproved,40,Accuracy,70.0,Judge
+haiku-haiku,Claude 3.5 Haiku,Low Conflict,Unknown,40,Accuracy,62.5,Judge
+haiku-haiku,Claude 3.5 Haiku,High Conflict,Proved,40,Accuracy,40.0,Judge
+haiku-haiku,Claude 3.5 Haiku,High Conflict,Disproved,40,Accuracy,70.0,Judge
+haiku-haiku,Claude 3.5 Haiku,High Conflict,Unknown,40,Accuracy,62.5,Judge
+haiku-haiku,Claude 3.5 Sonnet,Low Conflict,Proved,40,Accuracy,47.5,Judge
+haiku-haiku,Claude 3.5 Sonnet,Low Conflict,Disproved,40,Accuracy,37.5,Judge
+haiku-haiku,Claude 3.5 Sonnet,Low Conflict,Unknown,40,Accuracy,95.0,Judge
+haiku-haiku,Claude 3.5 Sonnet,High Conflict,Proved,40,Accuracy,27.500000000000004,Judge
+haiku-haiku,Claude 3.5 Sonnet,High Conflict,Disproved,40,Accuracy,32.5,Judge
+haiku-haiku,Claude 3.5 Sonnet,High Conflict,Unknown,40,Accuracy,95.0,Judge
+haiku-haiku,DeepSeek V3,Low Conflict,Proved,40,Accuracy,55.00000000000001,Judge
+haiku-haiku,DeepSeek V3,Low Conflict,Disproved,40,Accuracy,67.5,Judge
+haiku-haiku,DeepSeek V3,Low Conflict,Unknown,40,Accuracy,70.0,Judge
+haiku-haiku,DeepSeek V3,High Conflict,Proved,40,Accuracy,55.00000000000001,Judge
+haiku-haiku,DeepSeek V3,High Conflict,Disproved,40,Accuracy,72.5,Judge
+haiku-haiku,DeepSeek V3,High Conflict,Unknown,40,Accuracy,62.5,Judge
+haiku-haiku,Gemini 1.5 Flash,Low Conflict,Proved,40,Accuracy,7.5,Judge
+haiku-haiku,Gemini 1.5 Flash,Low Conflict,Disproved,40,Accuracy,40.0,Judge
+haiku-haiku,Gemini 1.5 Flash,Low Conflict,Unknown,40,Accuracy,95.0,Judge
+haiku-haiku,Gemini 1.5 Flash,High Conflict,Proved,40,Accuracy,15.0,Judge
+haiku-haiku,Gemini 1.5 Flash,High Conflict,Disproved,40,Accuracy,45.0,Judge
+haiku-haiku,Gemini 1.5 Flash,High Conflict,Unknown,40,Accuracy,80.0,Judge
+haiku-haiku,GPT-4o,Low Conflict,Proved,40,Accuracy,50.0,Judge
+haiku-haiku,GPT-4o,Low Conflict,Disproved,40,Accuracy,77.5,Judge
+haiku-haiku,GPT-4o,Low Conflict,Unknown,40,Accuracy,82.5,Judge
+haiku-haiku,GPT-4o,High Conflict,Proved,40,Accuracy,40.0,Judge
+haiku-haiku,GPT-4o,High Conflict,Disproved,40,Accuracy,67.5,Judge
+haiku-haiku,GPT-4o,High Conflict,Unknown,40,Accuracy,75.0,Judge
+sonnet-sonnet,Claude 3.5 Haiku,Low Conflict,Proved,40,Accuracy,62.5,Judge
+sonnet-sonnet,Claude 3.5 Haiku,Low Conflict,Disproved,40,Accuracy,67.5,Judge
+sonnet-sonnet,Claude 3.5 Haiku,Low Conflict,Unknown,40,Accuracy,75.0,Judge
+sonnet-sonnet,Claude 3.5 Haiku,High Conflict,Proved,40,Accuracy,60.0,Judge
+sonnet-sonnet,Claude 3.5 Haiku,High Conflict,Disproved,40,Accuracy,57.49999999999999,Judge
+sonnet-sonnet,Claude 3.5 Haiku,High Conflict,Unknown,40,Accuracy,82.5,Judge
+sonnet-sonnet,Claude 3.5 Sonnet,Low Conflict,Proved,40,Accuracy,55.00000000000001,Judge
+sonnet-sonnet,Claude 3.5 Sonnet,Low Conflict,Disproved,40,Accuracy,45.0,Judge
+sonnet-sonnet,Claude 3.5 Sonnet,Low Conflict,Unknown,40,Accuracy,95.0,Judge
+sonnet-sonnet,Claude 3.5 Sonnet,High Conflict,Proved,40,Accuracy,50.0,Judge
+sonnet-sonnet,Claude 3.5 Sonnet,High Conflict,Disproved,40,Accuracy,35.0,Judge
+sonnet-sonnet,Claude 3.5 Sonnet,High Conflict,Unknown,40,Accuracy,87.5,Judge
+sonnet-sonnet,DeepSeek V3,Low Conflict,Proved,18,Accuracy,72.22222222222221,Judge
+sonnet-sonnet,DeepSeek V3,Low Conflict,Disproved,17,Accuracy,82.35294117647058,Judge
+sonnet-sonnet,DeepSeek V3,Low Conflict,Unknown,10,Accuracy,90.0,Judge
+sonnet-sonnet,DeepSeek V3,High Conflict,Proved,10,Accuracy,60.0,Judge
+sonnet-sonnet,DeepSeek V3,High Conflict,Disproved,12,Accuracy,75.0,Judge
+sonnet-sonnet,DeepSeek V3,High Conflict,Unknown,14,Accuracy,92.85714285714286,Judge
+sonnet-sonnet,Gemini 1.5 Flash,Low Conflict,Proved,40,Accuracy,20.0,Judge
+sonnet-sonnet,Gemini 1.5 Flash,Low Conflict,Disproved,40,Accuracy,22.5,Judge
+sonnet-sonnet,Gemini 1.5 Flash,Low Conflict,Unknown,40,Accuracy,97.5,Judge
+sonnet-sonnet,Gemini 1.5 Flash,High Conflict,Proved,40,Accuracy,35.0,Judge
+sonnet-sonnet,Gemini 1.5 Flash,High Conflict,Disproved,40,Accuracy,35.0,Judge
+sonnet-sonnet,Gemini 1.5 Flash,High Conflict,Unknown,40,Accuracy,95.0,Judge
+sonnet-sonnet,GPT-4o,Low Conflict,Proved,40,Accuracy,45.0,Judge
+sonnet-sonnet,GPT-4o,Low Conflict,Disproved,40,Accuracy,62.5,Judge
+sonnet-sonnet,GPT-4o,Low Conflict,Unknown,40,Accuracy,92.5,Judge
+sonnet-sonnet,GPT-4o,High Conflict,Proved,40,Accuracy,60.0,Judge
+sonnet-sonnet,GPT-4o,High Conflict,Disproved,40,Accuracy,52.5,Judge
+sonnet-sonnet,GPT-4o,High Conflict,Unknown,40,Accuracy,82.5,Judge
