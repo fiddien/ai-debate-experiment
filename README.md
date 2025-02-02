@@ -1,6 +1,6 @@
 # AI Debate Experiment
 
-This repository contains code and configurations for running AI debate experiments. The experiments involve different AI models debating on BoardgameQA[^1] and being judged by other AI models. The goal is to explore the capabilities of AI in generating and evaluating arguments in a persuasive debate format.
+This repository contains code and configurations for running AI debate experiments. The experiments involve different AI models debating on BoardgameQA[^1] and being judged by other AI models. The goal is to explore the capabilities of AI in generating and evaluating arguments in a persuasive debate format.[^2]
 
 ## Running Experiments
 
@@ -59,6 +59,11 @@ Example with custom options:
 ```bash
 python main.py --config-file configs/gpt4_on_haikus.json --samples-per-label 30 --output-dir custom_results
 ```
+
+## TODO
+- [ ] Upload debate and judge records
+- [ ] Clean up records for the webapp
+
 
 [^1]: Kazemi, M., Yuan, Q., Bhatia, D., Kim, N., Xu, X., Imbrasaite, V., & Ramachandran, D. (2024). Boardgameqa: A dataset for natural language reasoning with contradictory information. *Advances in Neural Information Processing Systems*, 36. [[Link](https://proceedings.neurips.cc/paper_files/paper/2023/hash/7adce80e86aa841490e6307109094de5-Abstract-Datasets_and_Benchmarks.html)]
 
